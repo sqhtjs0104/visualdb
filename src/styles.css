@@ -485,6 +485,7 @@ small {
   font-size: 11px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
   min-width: 220px;
+  transform: translateY(100%);
 }
 
 .relation-tooltip__path {

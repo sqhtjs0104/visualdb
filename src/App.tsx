@@ -165,7 +165,7 @@ export default function App() {
             <div className="schema-panel">
               <div className="schema-panel__header">
                 <div>
-                  <div className="label">선택된 테이블</div>
+                  {/* <div className="label">선택된 테이블</div> */}
                   <div className="schema-panel__title">
                     {hydratedSelectedTable ? hydratedSelectedTable.name : '테이블을 선택하세요'}
                   </div>
@@ -197,35 +197,35 @@ export default function App() {
                 isEditing && draftTable ? (
                   <TableSchemaEditor table={draftTable} tables={graph.tables} onChange={handleDraftChange} />
                 ) : (
-                    <div className="schema-panel__table">
-                      <div className="schema-table__header schema-table__header--editable">
-                        <span>컬럼</span>
-                        <span>타입</span>
-                        <span>Nullable</span>
-                        <span>PK</span>
-                        <span>Unique</span>
-                        <span>Indexed</span>
-                        <span>FK</span>
-                        <span>on Update</span>
-                        <span>on Delete</span>
-                      </div>
-                      <div className="schema-table__body">
-                        {hydratedSelectedTable.columns.map((column) => (
-                          <div key={column.name} className="schema-table__row">
-                            <span>{column.name}</span>
-                            <span>{column.type}</span>
-                            <span>{column.nullable ? 'YES' : 'NO'}</span>
-                            <span>{column.isPrimary ? '●' : '–'}</span>
-                            <span>{column.isUnique ? '●' : '–'}</span>
-                            <span>{column.isIndexed ? '●' : '–'}</span>
-                            <span>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
-                            <span>{column.foreignKey?.onUpdate ?? '–'}</span>
-                            <span>{column.foreignKey?.onDelete ?? '–'}</span>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="schema-panel__table">
+                    <div className="schema-table__header schema-table__header--editable">
+                      <span>컬럼</span>
+                      <span>타입</span>
+                      <span>Nullable</span>
+                      <span>PK</span>
+                      <span>Unique</span>
+                      <span>Indexed</span>
+                      <span>FK</span>
+                      <span>on Update</span>
+                      <span>on Delete</span>
                     </div>
-                  )
+                    <div className="schema-table__body">
+                      {hydratedSelectedTable.columns.map((column) => (
+                        <div key={column.name} className="schema-table__row">
+                          <span>{column.name}</span>
+                          <span>{column.type}</span>
+                          <span>{column.nullable ? 'YES' : 'NO'}</span>
+                          <span>{column.isPrimary ? '●' : '–'}</span>
+                          <span>{column.isUnique ? '●' : '–'}</span>
+                          <span>{column.isIndexed ? '●' : '–'}</span>
+                          <span>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
+                          <span>{column.foreignKey?.onUpdate ?? '–'}</span>
+                          <span>{column.foreignKey?.onDelete ?? '–'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="schema-panel__empty">박스나 목록에서 테이블을 선택하면 스키마가 표시됩니다.</div>
               )}

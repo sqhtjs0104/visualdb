@@ -119,8 +119,7 @@ function RelationEdge({
   const start: [number, number, number] = [from[0], EDGE_HEIGHT, from[2]];
   const end: [number, number, number] = [to[0], EDGE_HEIGHT, to[2]];
   const opacity = isHovered ? 1 : isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
-  const width = isHovered || isConnected ? 2.6 : 1.6;
-  const hitWidth = 14;
+  const width = (isHovered || isConnected) ? 4 : 2;
   const midpoint: [number, number, number] = useMemo(
     () => [(start[0] + end[0]) / 2, EDGE_HEIGHT + 0.05, (start[2] + end[2]) / 2],
     [start, end]
@@ -172,8 +171,8 @@ function RelationEdge({
         lineWidth={width}
         transparent
         opacity={opacity}
-        onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
+        onPointerOver={handlePointerOver}
       />
     </group>
   );
