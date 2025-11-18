@@ -10,11 +10,12 @@ type TableInstance = {
 
 const BOX_DIMENSIONS = {
   width: 1.7,
-  height: 0.9,
+  height: 1,
   depth: 1.3,
 };
 
-const EDGE_HEIGHT = BOX_DIMENSIONS.height / 2 + 0.05;
+// const EDGE_HEIGHT = BOX_DIMENSIONS.height;
+const EDGE_HEIGHT = 0;
 
 const LABEL_OFFSETS = {
   topDistance: 0.18,
@@ -72,6 +73,7 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
       </mesh>
       <Html
         transform
+        zIndexRange={[0, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[
           BOX_DIMENSIONS.width / 2,
@@ -85,6 +87,7 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
       </Html>
       <Html
         transform
+        zIndexRange={[0, 0]}
         position={[BOX_DIMENSIONS.width / 2, LABEL_OFFSETS.frontHeight, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
       >
         <div className="table-label-wrapper table-label-wrapper--front">
