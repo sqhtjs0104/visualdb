@@ -14,6 +14,8 @@ const BOX_DIMENSIONS = {
   depth: 1.3,
 };
 
+const EDGE_HEIGHT = BOX_DIMENSIONS.height / 2 + 0.05;
+
 const LABEL_OFFSETS = {
   topDistance: 0.18,
   topHeight: 0.06,
@@ -104,10 +106,11 @@ function RelationEdge({
   isConnected: boolean;
   hasSelection: boolean;
 }) {
-  const mid: [number, number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 + 0.2, (from[2] + to[2]) / 2];
+  const start: [number, number, number] = [from[0], EDGE_HEIGHT, from[2]];
+  const end: [number, number, number] = [to[0], EDGE_HEIGHT, to[2]];
   const opacity = isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
   const width = isConnected ? 2.6 : 1.6;
-  return <Line points={[from, mid, to]} color="#c4b5fd" lineWidth={width} transparent opacity={opacity} />;
+  return <Line points={[start, end]} color="#c4b5fd" lineWidth={width} transparent opacity={opacity} />;
 }
 
 interface SceneProps {

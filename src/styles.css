@@ -47,6 +47,12 @@ body {
   gap: 8px;
 }
 
+.schema-file-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 textarea {
   width: 100%;
   min-height: 160px;
