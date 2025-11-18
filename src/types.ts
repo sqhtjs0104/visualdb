@@ -7,6 +7,10 @@ export type Column = {
   isUnique?: boolean;
   isIndexed?: boolean;
   comment?: string;
+  foreignKey?: {
+    table: string;
+    column: string;
+  };
 };
 
 export type Index = {
