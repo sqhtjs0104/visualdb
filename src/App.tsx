@@ -3,24 +3,114 @@ import { Scene3D } from './components/Scene3D';
 import { SchemaInputPanel } from './components/SchemaInputPanel';
 import { ModelInfoPanel } from './components/ModelInfoPanel';
 import { mockGraph } from './mockData';
-import { SchemaGraph } from './types';
+import { SchemaGraph, Table, Relation } from './types';
+import { TableSchemaEditor } from './components/TableSchemaEditor';
 
 function serializeGraph(graph: SchemaGraph) {
   return JSON.stringify(graph, null, 2);
+}
+
+function attachColumnForeignKeys(table: Table, relations: Relation[]) {
+  const related = relations.filter(
+    (rel) => rel.fromTable === table.name && rel.fromColumns.length === 1 && rel.toColumns.length === 1
+  );
+
+  return {
+    ...table,
+    columns: table.columns.map((column) => {
+      const match = related.find((rel) => rel.fromColumns[0] === column.name);
+      if (!match) return column;
+      return {
+        ...column,
+        foreignKey: {
+          table: match.toTable,
+          column: match.toColumns[0],
+        },
+      };
+    }),
+  };
 }
 
 export default function App() {
   const [graph, setGraph] = React.useState<SchemaGraph>(mockGraph);
   const [inputValue, setInputValue] = React.useState<string>(serializeGraph(mockGraph));
   const [activeTable, setActiveTable] = React.useState<string | undefined>();
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [draftTable, setDraftTable] = React.useState<Table | null>(null);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
-  const handleGraphChange = (next: SchemaGraph) => {
+  React.useEffect(() => {
+    if (!selectedTable) {
+      setDraftTable(null);
+      setIsEditing(false);
+      return;
+    }
+    setDraftTable(attachColumnForeignKeys(selectedTable, graph.relations));
+    setIsEditing(false);
+  }, [graph.relations, selectedTable]);
+
+  const handleGraphChange = (next: SchemaGraph, options?: { preserveActive?: boolean }) => {
     setGraph(next);
-    setActiveTable(undefined);
+    setInputValue(serializeGraph(next));
+    if (!options?.preserveActive) {
+      setActiveTable(undefined);
+    }
   };
 
+  const handleDraftChange = (next: Table) => {
+    setDraftTable(next);
+  };
+
+  const handleCancelEdit = () => {
+    if (selectedTable) {
+      setDraftTable(attachColumnForeignKeys(selectedTable, graph.relations));
+    }
+    setIsEditing(false);
+  };
+
+  const buildRelationsFromColumns = (table: Table): Relation[] => {
+    const existingRelations = graph.relations.filter((rel) => rel.fromTable === table.name);
+    return table.columns.flatMap((column) => {
+      if (!column.foreignKey) return [];
+      const match = existingRelations.find((rel) => rel.fromColumns[0] === column.name);
+      return [
+        {
+          name: match?.name ?? `fk_${table.name}_${column.name}`,
+          fromTable: table.name,
+          fromColumns: [column.name],
+          toTable: column.foreignKey.table,
+          toColumns: [column.foreignKey.column],
+          onDelete: match?.onDelete,
+          onUpdate: match?.onUpdate,
+        },
+      ];
+    });
+  };
+
+  const handleSaveDraft = () => {
+    if (!draftTable) return;
+
+    const updatedRelations = buildRelationsFromColumns(draftTable);
+    const updatedTable: Table = {
+      ...draftTable,
+      relations: updatedRelations,
+      primaryKey: draftTable.columns.filter((col) => col.isPrimary).map((col) => col.name),
+    };
+
+    const nextTables = graph.tables.map((table) => (table.name === updatedTable.name ? updatedTable : table));
+    const preservedRelations = graph.relations.filter((rel) => rel.fromTable !== updatedTable.name);
+    const nextGraph = {
+      ...graph,
+      tables: nextTables,
+      relations: [...preservedRelations, ...updatedRelations],
+    };
+
+    handleGraphChange(nextGraph, { preserveActive: true });
+    setIsEditing(false);
+  };
+
+  const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
   const fkLookup = React.useMemo(() => {
     if (!selectedTable) return {} as Record<string, string[]>;
     const outgoing = graph.relations.filter((rel) => rel.fromTable === selectedTable.name);
@@ -60,37 +150,59 @@ export default function App() {
               <div className="schema-panel__header">
                 <div>
                   <div className="label">선택된 테이블</div>
-                  <div className="schema-panel__title">{selectedTable ? selectedTable.name : '테이블을 선택하세요'}</div>
-                </div>
-                {selectedTable && <span className="badge">{selectedTable.columns.length} cols</span>}
-              </div>
-              {selectedTable ? (
-                <div className="schema-panel__table">
-                  <div className="schema-table__header">
-                    <span>컬럼</span>
-                    <span>타입</span>
-                    <span>Nullable</span>
-                    <span>PK</span>
-                    <span>Unique</span>
-                    <span>Indexed</span>
-                    <span>FK</span>
+                  <div className="schema-panel__title">
+                    {hydratedSelectedTable ? hydratedSelectedTable.name : '테이블을 선택하세요'}
                   </div>
-                  <div className="schema-table__body">
-                    {selectedTable.columns.map((column) => (
-                      <div key={column.name} className="schema-table__row">
-                        <span>{column.name}</span>
-                        <span>{column.type}</span>
-                        <span>{column.nullable ? 'YES' : 'NO'}</span>
-                        <span>{column.isPrimary ? '●' : '–'}</span>
-                        <span>{column.isUnique ? '●' : '–'}</span>
-                        <span>{column.isIndexed ? '●' : '–'}</span>
-                        <span className="schema-fk-cell">
-                          {fkLookup[column.name] ? fkLookup[column.name].join(', ') : '–'}
-                        </span>
+                </div>
+                {hydratedSelectedTable && (
+                  <div className="schema-panel__actions">
+                    <span className="badge">{hydratedSelectedTable.columns.length} cols</span>
+                    {!isEditing ? (
+                      <button type="button" className="small-button" onClick={() => setIsEditing(true)}>
+                        편집
+                      </button>
+                    ) : (
+                      <div className="edit-action-group">
+                        <button type="button" className="small-button" onClick={handleSaveDraft}>
+                          저장
+                        </button>
+                        <button type="button" className="ghost-button" onClick={handleCancelEdit}>
+                          취소
+                        </button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
+                )}
+              </div>
+              {hydratedSelectedTable ? (
+                isEditing && draftTable ? (
+                  <TableSchemaEditor table={draftTable} tables={graph.tables} onChange={handleDraftChange} />
+                ) : (
+                  <div className="schema-panel__table">
+                    <div className="schema-table__header schema-table__header--editable">
+                      <span>컬럼</span>
+                      <span>타입</span>
+                      <span>Nullable</span>
+                      <span>PK</span>
+                      <span>Unique</span>
+                      <span>Indexed</span>
+                      <span>FK</span>
+                    </div>
+                    <div className="schema-table__body">
+                      {hydratedSelectedTable.columns.map((column) => (
+                        <div key={column.name} className="schema-table__row">
+                          <span>{column.name}</span>
+                          <span>{column.type}</span>
+                          <span>{column.nullable ? 'YES' : 'NO'}</span>
+                          <span>{column.isPrimary ? '●' : '–'}</span>
+                          <span>{column.isUnique ? '●' : '–'}</span>
+                          <span>{column.isIndexed ? '●' : '–'}</span>
+                          <span>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="schema-panel__empty">박스나 목록에서 테이블을 선택하면 스키마가 표시됩니다.</div>
               )}
