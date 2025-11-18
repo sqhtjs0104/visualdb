@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Html, Line, OrbitControls } from '@react-three/drei';
-import { SchemaGraph, Table } from '../types';
+import { Relation, SchemaGraph, Table } from '../types';
 
 type TableInstance = {
   table: Table;
@@ -103,17 +103,66 @@ function RelationEdge({
   to,
   isConnected,
   hasSelection,
+  relation,
 }: {
   from: [number, number, number];
   to: [number, number, number];
   isConnected: boolean;
   hasSelection: boolean;
+  relation: Relation;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
   const start: [number, number, number] = [from[0], EDGE_HEIGHT, from[2]];
   const end: [number, number, number] = [to[0], EDGE_HEIGHT, to[2]];
-  const opacity = isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
-  const width = isConnected ? 2.6 : 1.6;
-  return <Line points={[start, end]} color="#c4b5fd" lineWidth={width} transparent opacity={opacity} />;
+  const opacity = isHovered ? 1 : isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
+  const width = isHovered || isConnected ? 2.6 : 1.6;
+  const midpoint: [number, number, number] = useMemo(
+    () => [(start[0] + end[0]) / 2, EDGE_HEIGHT + 0.05, (start[2] + end[2]) / 2],
+    [start, end]
+  );
+
+  const handlePointerOver = useCallback(() => {
+    setIsHovered(true);
+    document.body.style.cursor = 'pointer';
+  }, []);
+
+  const handlePointerOut = useCallback(() => {
+    setIsHovered(false);
+    document.body.style.cursor = 'auto';
+  }, []);
+
+  useEffect(() => () => {
+    document.body.style.cursor = 'auto';
+  }, []);
+
+  return (
+    <group>
+      <Line
+        points={[start, end]}
+        color="#c4b5fd"
+        lineWidth={width}
+        transparent
+        opacity={opacity}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+      />
+      {isHovered && (
+        <Html position={midpoint} center distanceFactor={20} zIndexRange={[2, 2]}>
+          <div className="relation-tooltip">
+            <div className="relation-tooltip__path">
+              {relation.fromTable}.{relation.fromColumns.join(', ')}{' '}
+              <span className="relation-tooltip__arrow">→</span>{' '}
+              {relation.toTable}.{relation.toColumns.join(', ')}
+            </div>
+            <div className="relation-tooltip__meta">
+              <span>onUpdate: {relation.onUpdate ?? '—'}</span>
+              <span>onDelete: {relation.onDelete ?? '—'}</span>
+            </div>
+          </div>
+        </Html>
+      )}
+    </group>
+  );
 }
 
 interface SceneProps {
@@ -164,6 +213,7 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
             to={to}
             isConnected={isConnected}
             hasSelection={Boolean(activeTable)}
+            relation={rel}
           />
         );
       })}
