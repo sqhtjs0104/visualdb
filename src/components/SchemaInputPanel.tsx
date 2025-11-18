@@ -52,6 +52,7 @@ export function SchemaInputPanel({ value, onChange, onSubmit, onLoadFromFile, on
       <label htmlFor="schema-input">Schema 입력 / 설정 / 붙여넣기</label>
       <textarea
         id="schema-input"
+        rows={36}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Paste schema JSON here"

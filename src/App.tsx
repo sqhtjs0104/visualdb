@@ -144,7 +144,7 @@ export default function App() {
       <main className="main-panel">
         <Scene3D graph={graph} activeTable={activeTable} onSelect={setActiveTable} />
         <div className="overlay-panel">
-          <div className="title" style={{ marginBottom: 8 }}>
+          <div className="title" style={{ marginBottom: 12 }}>
             <span>테이블 선택</span>
             <span className="badge">{graph.tables.length} tables</span>
           </div>
@@ -199,28 +199,28 @@ export default function App() {
                 ) : (
                   <div className="schema-panel__table">
                     <div className="schema-table__header schema-table__header--editable">
-                      <span>컬럼</span>
-                      <span>타입</span>
-                      <span>Nullable</span>
-                      <span>PK</span>
-                      <span>Unique</span>
-                      <span>Indexed</span>
-                      <span>FK</span>
-                      <span>on Update</span>
-                      <span>on Delete</span>
+                      <span style={{ width: '50px', }}>컬럼</span>
+                      <span style={{ width: '70px', }}>타입</span>
+                      <span style={{ width: '40px', }}>Nullable</span>
+                      <span style={{ width: '40px', }}>PK</span>
+                      <span style={{ width: '40px', }}>Unique</span>
+                      <span style={{ width: '40px', }}>Indexed</span>
+                      <span style={{ width: '70px', }}>FK</span>
+                      <span style={{ width: '60px', }}>on Update</span>
+                      <span style={{ width: '60px', }}>on Delete</span>
                     </div>
                     <div className="schema-table__body">
                       {hydratedSelectedTable.columns.map((column) => (
                         <div key={column.name} className="schema-table__row">
-                          <span>{column.name}</span>
-                          <span>{column.type}</span>
-                          <span>{column.nullable ? 'YES' : 'NO'}</span>
-                          <span>{column.isPrimary ? '●' : '–'}</span>
-                          <span>{column.isUnique ? '●' : '–'}</span>
-                          <span>{column.isIndexed ? '●' : '–'}</span>
-                          <span>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
-                          <span>{column.foreignKey?.onUpdate ?? '–'}</span>
-                          <span>{column.foreignKey?.onDelete ?? '–'}</span>
+                          <span style={{ width: '50px', }}>{column.name}</span>
+                          <span style={{ width: '70px', }}>{column.type}</span>
+                          <span style={{ width: '40px', }}>{column.nullable ? 'YES' : 'NO'}</span>
+                          <span style={{ width: '40px', }}>{column.isPrimary ? '●' : '–'}</span>
+                          <span style={{ width: '40px', }}>{column.isUnique ? '●' : '–'}</span>
+                          <span style={{ width: '40px', }}>{column.isIndexed ? '●' : '–'}</span>
+                          <span style={{ width: '70px', }}>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
+                          <span style={{ width: '60px', }}>{column.foreignKey?.onUpdate ?? '–'}</span>
+                          <span style={{ width: '60px', }}>{column.foreignKey?.onDelete ?? '–'}</span>
                         </div>
                       ))}
                     </div>
