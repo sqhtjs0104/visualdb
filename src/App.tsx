@@ -1,7 +1,6 @@
 import React from 'react';
 import { Scene3D } from './components/Scene3D';
 import { SchemaInputPanel } from './components/SchemaInputPanel';
-import { ModelInfoPanel } from './components/ModelInfoPanel';
 import { mockGraph } from './mockData';
 import { SchemaGraph, Table, Relation } from './types';
 import { TableSchemaEditor } from './components/TableSchemaEditor';
@@ -37,6 +36,7 @@ export default function App() {
   const [activeTable, setActiveTable] = React.useState<string | undefined>();
   const [isEditing, setIsEditing] = React.useState(false);
   const [draftTable, setDraftTable] = React.useState<Table | null>(null);
+  const [isSchemaModalOpen, setIsSchemaModalOpen] = React.useState(false);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
@@ -111,20 +111,19 @@ export default function App() {
   };
 
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
-  const fkLookup = React.useMemo(() => {
-    if (!selectedTable) return {} as Record<string, string[]>;
-    const outgoing = graph.relations.filter((rel) => rel.fromTable === selectedTable.name);
-    return outgoing.reduce<Record<string, string[]>>((acc, rel) => {
-      rel.fromColumns.forEach((col) => {
-        const target = `${rel.toTable}.${rel.toColumns.join(', ')}`;
-        acc[col] = acc[col] ? [...acc[col], target] : [target];
-      });
-      return acc;
-    }, {});
-  }, [graph.relations, selectedTable]);
 
   return (
     <div className="app-shell">
+      <div className="settings-button__wrapper">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Schema JSON 설정"
+          onClick={() => setIsSchemaModalOpen(true)}
+        >
+          ⚙️
+        </button>
+      </div>
       <main className="main-panel">
         <Scene3D graph={graph} activeTable={activeTable} onSelect={setActiveTable} />
         <div className="overlay-panel">
@@ -153,6 +152,9 @@ export default function App() {
                   <div className="schema-panel__title">
                     {hydratedSelectedTable ? hydratedSelectedTable.name : '테이블을 선택하세요'}
                   </div>
+                  {hydratedSelectedTable?.comment && (
+                    <div className="schema-panel__comment">{hydratedSelectedTable.comment}</div>
+                  )}
                 </div>
                 {hydratedSelectedTable && (
                   <div className="schema-panel__actions">
@@ -208,19 +210,25 @@ export default function App() {
               )}
             </div>
           </div>
-          <div className="overlay-stack">
-            <details className="control-card" open>
-              <summary>Schema JSON</summary>
-              <SchemaInputPanel value={inputValue} onChange={setInputValue} onSubmit={handleGraphChange} />
-            </details>
-            <details className="control-card" open={Boolean(selectedTable)}>
-              <summary>Model 상세</summary>
-              <ModelInfoPanel table={graph.tables.find((t) => t.name === activeTable)} />
-            </details>
-          </div>
         </div>
         <div className="scene-footer">Orbit: 드래그 · Zoom: 휠 · Pan: 우클릭</div>
       </main>
+      {isSchemaModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsSchemaModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <div>
+                <div className="label">Schema JSON</div>
+                <div className="schema-panel__title">스키마 설정</div>
+              </div>
+              <button type="button" className="icon-button" aria-label="닫기" onClick={() => setIsSchemaModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <SchemaInputPanel value={inputValue} onChange={setInputValue} onSubmit={handleGraphChange} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
