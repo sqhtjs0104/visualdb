@@ -351,6 +351,29 @@ small {
   z-index: 2;
 }
 
+.table-label {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 10px;
+  padding: 4px 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.table-label--top {
+  margin-top: -4px;
+}
+
+.table-label--front {
+  margin-left: 6px;
+  margin-top: 2px;
+}
+
 .overlay-stack {
   display: flex;
   flex-direction: column;

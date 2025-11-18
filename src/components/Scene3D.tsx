@@ -1,11 +1,24 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Line, OrbitControls } from '@react-three/drei';
+import { Html, Line, OrbitControls } from '@react-three/drei';
 import { SchemaGraph, Table } from '../types';
 
 type TableInstance = {
   table: Table;
   position: [number, number, number];
+};
+
+const BOX_DIMENSIONS = {
+  width: 1.7,
+  height: 0.9,
+  depth: 1.3,
+};
+
+const LABEL_OFFSETS = {
+  topDistance: 0.18,
+  topHeight: 0.06,
+  frontDepth: 0.08,
+  frontHeight: -0.34,
 };
 
 function computeFallbackPositions(tables: Table[]): Record<string, [number, number, number]> {
@@ -52,17 +65,26 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
   return (
     <group position={position} onClick={onSelect} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
       <mesh castShadow receiveShadow>
-        <boxGeometry args={[1.7, 0.9, 1.3]} />
+        <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
         <meshStandardMaterial color={isActive ? '#4f46e5' : '#475569'} emissive={isActive ? '#4338ca' : '#1f2937'} opacity={0.92} transparent />
       </mesh>
-      <mesh position={[0, 0.55, 0]}>
-        <planeGeometry args={[1.55, 1.05]} />
-        <meshBasicMaterial color="#0f172a" transparent opacity={0.72} />
-      </mesh>
-      <mesh position={[0, 0.56, 0]}>
-        <planeGeometry args={[1.55, 1.05]} />
-        <meshBasicMaterial color="transparent" />
-      </mesh>
+      <Html
+        transform
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[
+          BOX_DIMENSIONS.width / 2,
+          BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight,
+          -(BOX_DIMENSIONS.depth / 2) - LABEL_OFFSETS.topDistance,
+        ]}
+      >
+        <div className="table-label table-label--top">{table.name}</div>
+      </Html>
+      <Html
+        transform
+        position={[BOX_DIMENSIONS.width / 2, LABEL_OFFSETS.frontHeight, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
+      >
+        <div className="table-label table-label--front">{table.name}</div>
+      </Html>
     </group>
   );
 }
@@ -93,7 +115,7 @@ interface SceneProps {
 export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
   const instances = useTableInstances(graph);
   const nodeLookup = useMemo(() => Object.fromEntries(instances.map((i) => [i.table.name, i.position])), [instances]);
-  const cameraPosition = useMemo(() => [8, 10, 12] as [number, number, number], []);
+  const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
 
   return (
     <Canvas shadows className="canvas-wrapper" camera={{ position: cameraPosition, fov: 50 }}>
