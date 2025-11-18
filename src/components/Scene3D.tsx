@@ -67,9 +67,21 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
   );
 }
 
-function RelationEdge({ from, to }: { from: [number, number, number]; to: [number, number, number] }) {
+function RelationEdge({
+  from,
+  to,
+  isConnected,
+  hasSelection,
+}: {
+  from: [number, number, number];
+  to: [number, number, number];
+  isConnected: boolean;
+  hasSelection: boolean;
+}) {
   const mid: [number, number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 + 0.2, (from[2] + to[2]) / 2];
-  return <Line points={[from, mid, to]} color="#a78bfa" lineWidth={2} />;
+  const opacity = isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
+  const width = isConnected ? 2.6 : 1.6;
+  return <Line points={[from, mid, to]} color="#c4b5fd" lineWidth={width} transparent opacity={opacity} />;
 }
 
 interface SceneProps {
@@ -103,7 +115,16 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
         const from = nodeLookup[rel.fromTable];
         const to = nodeLookup[rel.toTable];
         if (!from || !to) return null;
-        return <RelationEdge key={rel.name} from={from} to={to} />;
+        const isConnected = activeTable === rel.fromTable || activeTable === rel.toTable;
+        return (
+          <RelationEdge
+            key={rel.name}
+            from={from}
+            to={to}
+            isConnected={isConnected}
+            hasSelection={Boolean(activeTable)}
+          />
+        );
       })}
     </Canvas>
   );
