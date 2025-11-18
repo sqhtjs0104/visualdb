@@ -77,13 +77,17 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
           -(BOX_DIMENSIONS.depth / 2) - LABEL_OFFSETS.topDistance,
         ]}
       >
-        <div className="table-label table-label--top">{table.name}</div>
+        <div className="table-label-wrapper table-label-wrapper--top">
+          <div className="table-label table-label--top">{table.name}</div>
+        </div>
       </Html>
       <Html
         transform
         position={[BOX_DIMENSIONS.width / 2, LABEL_OFFSETS.frontHeight, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
       >
-        <div className="table-label table-label--front">{table.name}</div>
+        <div className="table-label-wrapper table-label-wrapper--front">
+          <div className="table-label table-label--front">{table.name}</div>
+        </div>
       </Html>
     </group>
   );
