@@ -5,8 +5,36 @@ import { mockGraph } from './mockData';
 import { SchemaGraph, Table, Relation } from './types';
 import { TableSchemaEditor } from './components/TableSchemaEditor';
 
+const SCHEMA_ENDPOINT = '/schema.json';
+
 function serializeGraph(graph: SchemaGraph) {
   return JSON.stringify(graph, null, 2);
+}
+
+async function persistSchemaToFile(graph: SchemaGraph) {
+  try {
+    await fetch(SCHEMA_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: serializeGraph(graph),
+    });
+  } catch (error) {
+    console.error('Failed to write schema.json', error);
+  }
+}
+
+async function loadSchemaFromFile(): Promise<SchemaGraph | null> {
+  try {
+    const response = await fetch(`${SCHEMA_ENDPOINT}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const raw = await response.text();
+    const parsed = JSON.parse(raw) as SchemaGraph;
+    if (!parsed.tables || !parsed.relations) return null;
+    return parsed;
+  } catch (error) {
+    console.error('Failed to read schema.json', error);
+    return null;
+  }
 }
 
 function attachColumnForeignKeys(table: Table, relations: Relation[]) {
@@ -42,6 +70,20 @@ export default function App() {
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
+  const handleGraphChange = React.useCallback(
+    (next: SchemaGraph, options?: { preserveActive?: boolean; skipPersist?: boolean }) => {
+      setGraph(next);
+      setInputValue(serializeGraph(next));
+      if (!options?.preserveActive) {
+        setActiveTable(undefined);
+      }
+      if (!options?.skipPersist) {
+        void persistSchemaToFile(next);
+      }
+    },
+    []
+  );
+
   React.useEffect(() => {
     if (!selectedTable) {
       setDraftTable(null);
@@ -52,13 +94,15 @@ export default function App() {
     setIsEditing(false);
   }, [graph.relations, selectedTable]);
 
-  const handleGraphChange = (next: SchemaGraph, options?: { preserveActive?: boolean }) => {
-    setGraph(next);
-    setInputValue(serializeGraph(next));
-    if (!options?.preserveActive) {
-      setActiveTable(undefined);
-    }
-  };
+  React.useEffect(() => {
+    const bootstrapFromFile = async () => {
+      const loaded = await loadSchemaFromFile();
+      if (!loaded) return;
+      handleGraphChange(loaded, { preserveActive: true, skipPersist: true });
+    };
+
+    void bootstrapFromFile();
+  }, [handleGraphChange]);
 
   const handleDraftChange = (next: Table) => {
     setDraftTable(next);

@@ -66,8 +66,23 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
   }, []);
 
   return (
-    <group position={position} onClick={onSelect} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
-      <mesh castShadow receiveShadow>
+    <group position={position} onClick={onSelect}>
+      <mesh
+        castShadow
+        receiveShadow
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          handlePointerOver();
+        }}
+        onPointerMove={(event) => {
+          event.stopPropagation();
+          handlePointerOver();
+        }}
+        onPointerOut={(event) => {
+          event.stopPropagation();
+          handlePointerOut();
+        }}
+      >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
         <meshStandardMaterial color={isActive ? '#4f46e5' : '#475569'} emissive={isActive ? '#4338ca' : '#1f2937'} opacity={0.92} transparent />
       </mesh>
