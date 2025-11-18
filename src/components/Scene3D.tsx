@@ -18,10 +18,8 @@ const BOX_DIMENSIONS = {
 const EDGE_HEIGHT = 0;
 
 const LABEL_OFFSETS = {
-  topDistance: 0.18,
-  topHeight: 0.06,
-  frontDepth: 0.08,
-  frontHeight: -0.34,
+  topHeight: 0.001,
+  frontDepth: 0.001,
 };
 
 function computeFallbackPositions(tables: Table[]): Record<string, [number, number, number]> {
@@ -88,13 +86,10 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
       </mesh>
       <Html
         transform
+        occlude
         zIndexRange={[0, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[
-          BOX_DIMENSIONS.width / 2,
-          BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight,
-          -(BOX_DIMENSIONS.depth / 2) - LABEL_OFFSETS.topDistance,
-        ]}
+        position={[0, BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight, 0]}
       >
         <div className="table-label-wrapper table-label-wrapper--top">
           <div className="table-label table-label--top">{table.name}</div>
@@ -102,8 +97,9 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
       </Html>
       <Html
         transform
+        occlude
         zIndexRange={[0, 0]}
-        position={[BOX_DIMENSIONS.width / 2, LABEL_OFFSETS.frontHeight, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
+        position={[0, 0, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
       >
         <div className="table-label-wrapper table-label-wrapper--front">
           <div className="table-label table-label--front">{table.name}</div>
