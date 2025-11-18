@@ -9,9 +9,9 @@ type TableInstance = {
 };
 
 const BOX_DIMENSIONS = {
-  width: 1.7,
-  height: 1,
-  depth: 1.3,
+  width: 2.2,
+  height: 1.2,
+  depth: 1.6,
 };
 
 // const EDGE_HEIGHT = BOX_DIMENSIONS.height;
@@ -119,7 +119,7 @@ function RelationEdge({
   const start: [number, number, number] = [from[0], EDGE_HEIGHT, from[2]];
   const end: [number, number, number] = [to[0], EDGE_HEIGHT, to[2]];
   const opacity = isHovered ? 1 : isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
-  const width = (isHovered || isConnected) ? 4 : 2;
+  const width = (isHovered || isConnected) ? 3.5 : 2.5;
   const midpoint: [number, number, number] = useMemo(
     () => [(start[0] + end[0]) / 2, EDGE_HEIGHT + 0.05, (start[2] + end[2]) / 2],
     [start, end]
@@ -158,7 +158,7 @@ function RelationEdge({
       <Line
         points={[start, end]}
         color="#ffffff"
-        lineWidth={hitWidth}
+        lineWidth={width * 2}
         transparent
         opacity={0}
         onPointerOver={handlePointerOver}
