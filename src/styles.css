@@ -369,7 +369,7 @@ small {
 .table-label {
   border: none;
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 2px 4px;
   color: #e2e8f0;
   font-size: 12px;
   font-weight: 500;
@@ -380,20 +380,16 @@ small {
   z-index: 1;
 }
 
-.table-label--top {
-  /* background: rgba(15, 23, 42, 0.7); */
-}
-
-.table-label--front {
-}
-
 .table-label-wrapper {
   display: inline-flex;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(1%, -115%, 0);
+  width: 85px;
+  justify-content: flex-end;
+  cursor: pointer;
 }
 
 .table-label-wrapper--front {
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(2%, 60%, 0);
 }
 
 .overlay-stack {

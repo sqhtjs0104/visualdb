@@ -91,7 +91,7 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight, 0]}
       >
-        <div className="table-label-wrapper table-label-wrapper--top">
+        <div className="table-label-wrapper table-label-wrapper--top" onClick={onSelect}>
           <div className="table-label table-label--top">{table.name}</div>
         </div>
       </Html>
@@ -101,7 +101,7 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
         zIndexRange={[0, 0]}
         position={[0, 0, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
       >
-        <div className="table-label-wrapper table-label-wrapper--front">
+        <div className="table-label-wrapper table-label-wrapper--front" onClick={onSelect}>
           <div className="table-label table-label--front">{table.name}</div>
         </div>
       </Html>
