@@ -10,6 +10,8 @@ export type Column = {
   foreignKey?: {
     table: string;
     column: string;
+    onUpdate?: string;
+    onDelete?: string;
   };
 };
 

@@ -41,6 +41,7 @@ export function ModelInfoPanel({ table }: Props) {
           {table.relations.map((rel) => (
             <li key={rel.name}>
               {rel.name}: {rel.fromColumns.join(', ')} → {rel.toTable}.{rel.toColumns.join(', ')}{' '}
+              {rel.onUpdate && `(onUpdate: ${rel.onUpdate}) `}
               {rel.onDelete && `(onDelete: ${rel.onDelete})`}
             </li>
           ))}

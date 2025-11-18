@@ -233,7 +233,7 @@ button:active {
 .schema-table__header,
 .schema-table__row {
   display: grid;
-  grid-template-columns: 1.3fr 1.2fr repeat(4, 0.7fr) 1.4fr;
+  grid-template-columns: 1.25fr 1.1fr repeat(4, 0.7fr) 1.35fr 1fr 1fr;
   gap: 6px;
   align-items: center;
   font-size: 12px;
@@ -319,11 +319,11 @@ button:active {
 }
 
 .schema-table__header--editable {
-  grid-template-columns: 1.3fr 1.1fr repeat(4, 0.6fr) 1.2fr;
+  grid-template-columns: 1.3fr 1.1fr repeat(4, 0.6fr) 1.2fr 1fr 1fr;
 }
 
 .schema-table__row--editable {
-  grid-template-columns: 1.3fr 1fr repeat(4, 0.55fr) 1.4fr;
+  grid-template-columns: 1.3fr 1fr repeat(4, 0.55fr) 1.4fr 1fr 1fr;
   gap: 8px;
 }
 .schema-fk-cell {
@@ -469,4 +469,34 @@ small {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.relation-tooltip {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #e2e8f0;
+  font-size: 11px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  min-width: 220px;
+}
+
+.relation-tooltip__path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.relation-tooltip__arrow {
+  color: #f0abfc;
+}
+
+.relation-tooltip__meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  color: #cbd5e1;
 }

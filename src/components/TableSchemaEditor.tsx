@@ -15,6 +15,8 @@ const updateTableColumns = (table: Table, columns: Column[]): Table => ({
   primaryKey: buildPrimaryKeys(columns),
 });
 
+const fkActionOptions = ['CASCADE', 'SET NULL', 'NO ACTION', 'SET DEFAULT', 'RESTRICT'];
+
 export function TableSchemaEditor({ table, tables, onChange }: Props) {
   const handleColumnChange = (index: number, nextColumn: Column) => {
     const nextColumns = table.columns.map((col, i) => (i === index ? nextColumn : col));
@@ -31,14 +33,27 @@ export function TableSchemaEditor({ table, tables, onChange }: Props) {
       handleColumnChange(index, { ...table.columns[index], foreignKey: undefined });
       return;
     }
+    const previous = table.columns[index].foreignKey;
     const [fkTable, fkColumn] = value.split('.');
     handleColumnChange(index, {
       ...table.columns[index],
       foreignKey: {
         table: fkTable,
         column: fkColumn,
+        onDelete: previous?.onDelete,
+        onUpdate: previous?.onUpdate,
       },
     });
+  };
+
+  const handleFkActionChange = (index: number, key: 'onUpdate' | 'onDelete', value: string) => {
+    const target = table.columns[index];
+    if (!target.foreignKey) return;
+    const nextForeignKey = {
+      ...target.foreignKey,
+      [key]: value || undefined,
+    };
+    handleColumnChange(index, { ...target, foreignKey: nextForeignKey });
   };
 
   const addColumn = () => {
@@ -72,6 +87,8 @@ export function TableSchemaEditor({ table, tables, onChange }: Props) {
         <span>Unique</span>
         <span>Indexed</span>
         <span>FK 대상</span>
+        <span>on Update</span>
+        <span>on Delete</span>
       </div>
       <div className="schema-table__body">
         {table.columns.map((column, index) => (
@@ -109,6 +126,32 @@ export function TableSchemaEditor({ table, tables, onChange }: Props) {
             >
               <option value="">선택 없음</option>
               {fkOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <select
+              className="select-input"
+              value={column.foreignKey?.onUpdate ?? ''}
+              disabled={!column.foreignKey}
+              onChange={(e) => handleFkActionChange(index, 'onUpdate', e.target.value)}
+            >
+              <option value="">선택 없음</option>
+              {fkActionOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <select
+              className="select-input"
+              value={column.foreignKey?.onDelete ?? ''}
+              disabled={!column.foreignKey}
+              onChange={(e) => handleFkActionChange(index, 'onDelete', e.target.value)}
+            >
+              <option value="">선택 없음</option>
+              {fkActionOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
