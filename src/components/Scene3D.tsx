@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Line, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { SchemaGraph, Table } from '../types';
@@ -23,19 +23,34 @@ function computeFallbackPositions(tables: Table[]): Record<string, [number, numb
 function useTableInstances(graph: SchemaGraph): TableInstance[] {
   return useMemo(() => {
     const fallback = computeFallbackPositions(graph.tables);
+    const planeHeight = 0;
     return graph.tables.map((table) => {
       const layout = graph.layout?.nodes?.[table.name];
       const position: [number, number, number] = layout
-        ? [layout.x, layout.y, layout.z]
-        : fallback[table.name] ?? [0, 0, 0];
+        ? [layout.x, planeHeight, layout.z]
+        : fallback[table.name] ?? [0, planeHeight, 0];
       return { table, position };
     });
   }, [graph]);
 }
 
 function TableBox({ table, position, isActive, onSelect }: TableInstance & { isActive: boolean; onSelect: () => void }) {
+  const handlePointerOver = useCallback(() => {
+    document.body.style.cursor = 'pointer';
+  }, []);
+
+  const handlePointerOut = useCallback(() => {
+    document.body.style.cursor = 'auto';
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, []);
+
   return (
-    <group position={position} onClick={onSelect}>
+    <group position={position} onClick={onSelect} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[2.4, 0.9, 1.2]} />
         <meshStandardMaterial color={isActive ? '#60a5fa' : '#22d3ee'} emissive={isActive ? '#3b82f6' : '#0ea5e9'} opacity={0.9} transparent />
