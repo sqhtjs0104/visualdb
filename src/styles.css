@@ -353,12 +353,11 @@ small {
 }
 
 .table-label {
-  background: rgba(15, 23, 42, 0.7);
   border: none;
   border-radius: 6px;
   padding: 3px 6px;
   color: #e2e8f0;
-  font-size: 11px;
+  font-size: 8px;
   font-weight: 500;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -369,20 +368,21 @@ small {
 
 .table-label--top {
   margin-top: -4px;
+  background: rgba(15, 23, 42, 0.7);
 }
 
 .table-label--front {
-  margin-left: 6px;
+  margin-left: 0px;
   margin-top: 2px;
 }
 
 .table-label-wrapper {
   display: inline-flex;
-  transform: translate3d(-100%, -50%, 0);
+  transform: translate3d(-50%, -50%, 0);
 }
 
 .table-label-wrapper--front {
-  transform: translate3d(-100%, -50%, 0);
+  transform: translate3d(-50%, -50%, 0);
 }
 
 .overlay-stack {
