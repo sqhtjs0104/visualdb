@@ -382,7 +382,7 @@ small {
 
 .table-label--top {
   margin-top: -4px;
-  background: rgba(15, 23, 42, 0.7);
+  /* background: rgba(15, 23, 42, 0.7); */
 }
 
 .table-label--front {
@@ -392,11 +392,11 @@ small {
 
 .table-label-wrapper {
   display: inline-flex;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(-50%, 105%, 0);
 }
 
 .table-label-wrapper--front {
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(-50%, -15%, 0);
 }
 
 .overlay-stack {

@@ -84,7 +84,7 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
         }}
       >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
-        <meshStandardMaterial color={isActive ? '#4f46e5' : '#475569'} emissive={isActive ? '#4338ca' : '#1f2937'} opacity={0.92} transparent />
+        <meshStandardMaterial color={isActive ? '#4f46e5' : '#475569'} emissive={isActive ? '#4338ca' : '#1f2937'} opacity={0.98} transparent />
       </mesh>
       <Html
         transform
