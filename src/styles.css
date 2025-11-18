@@ -128,6 +128,11 @@ button:active {
   flex: 1;
 }
 
+.scene-container {
+  position: absolute;
+  inset: 0;
+}
+
 .canvas-wrapper {
   position: absolute;
   inset: 0;
@@ -500,4 +505,12 @@ small {
   gap: 10px;
   margin-top: 4px;
   color: #cbd5e1;
+}
+
+.relation-tooltip--floating {
+  position: fixed;
+  pointer-events: none;
+  z-index: 6;
+  transform: translateY(-8px);
+  max-width: 320px;
 }
