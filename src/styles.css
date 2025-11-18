@@ -140,7 +140,7 @@ button:active {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
-  z-index: 10;
+  z-index: 4;
 }
 
 .overlay-content {
@@ -353,16 +353,18 @@ small {
 }
 
 .table-label {
-  background: rgba(214, 214, 214, 0.95);
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: #343536;
-  font-size: 12px;
-  font-weight: 600;
+  background: rgba(15, 23, 42, 0.7);
+  border: none;
+  border-radius: 6px;
+  padding: 3px 6px;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 500;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
+  box-shadow: none;
+  backdrop-filter: blur(3px);
+  z-index: 1;
 }
 
 .table-label--top {
@@ -372,6 +374,15 @@ small {
 .table-label--front {
   margin-left: 6px;
   margin-top: 2px;
+}
+
+.table-label-wrapper {
+  display: inline-flex;
+  transform: translate3d(-100%, -50%, 0);
+}
+
+.table-label-wrapper--front {
+  transform: translate3d(-100%, -50%, 0);
 }
 
 .overlay-stack {
