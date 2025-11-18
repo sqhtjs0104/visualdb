@@ -130,16 +130,14 @@ button:active {
 .overlay-panel {
   position: absolute;
   top: 12px;
-  right: 12px;
+  left: 12px;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 14px;
   padding: 12px;
-  width: 620px;
-  color: #e2e7ef;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   width: 760px;
   color: #e2e8f0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
 }
@@ -206,6 +204,12 @@ button:active {
 .schema-panel__title {
   font-size: 16px;
   font-weight: 700;
+}
+
+.schema-panel__comment {
+  color: #cbd5e1;
+  margin-top: 2px;
+  font-size: 13px;
 }
 
 .label {
@@ -314,6 +318,7 @@ button:active {
 .schema-table__row--editable {
   grid-template-columns: 1.3fr 1fr repeat(4, 0.55fr) 1.4fr;
   gap: 8px;
+}
 .schema-fk-cell {
   color: #c7d2fe;
   font-size: 11px;
@@ -343,6 +348,7 @@ small {
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   font-size: 13px;
+  z-index: 2;
 }
 
 .overlay-stack {
@@ -372,4 +378,55 @@ small {
 
 .control-card > *:not(summary) {
   margin-top: 8px;
+}
+
+.settings-button__wrapper {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.icon-button:hover {
+  background: rgba(17, 24, 39, 0.95);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 4;
+}
+
+.modal {
+  background: #0b1220;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  width: min(820px, 90vw);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }

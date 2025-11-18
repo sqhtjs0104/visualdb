@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Line, OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { Line, OrbitControls } from '@react-three/drei';
 import { SchemaGraph, Table } from '../types';
 
 type TableInstance = {
@@ -93,14 +93,23 @@ interface SceneProps {
 export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
   const instances = useTableInstances(graph);
   const nodeLookup = useMemo(() => Object.fromEntries(instances.map((i) => [i.table.name, i.position])), [instances]);
+  const cameraPosition = useMemo(() => [8, 10, 12] as [number, number, number], []);
 
   return (
-    <Canvas shadows className="canvas-wrapper">
+    <Canvas shadows className="canvas-wrapper" camera={{ position: cameraPosition, fov: 50 }}>
       <color attach="background" args={["#0d1117"]} />
       <hemisphereLight intensity={0.4} groundColor="#0f172a" />
       <directionalLight position={[8, 12, 6]} intensity={0.85} castShadow />
-      <PerspectiveCamera makeDefault position={[8, 10, 12]} />
-      <OrbitControls enablePan enableRotate enableZoom />
+      <OrbitControls
+        makeDefault
+        enablePan
+        enableRotate
+        enableZoom
+        enableDamping
+        dampingFactor={0.06}
+        autoRotate={false}
+        target={[0, 0.4, 0]}
+      />
 
       {instances.map((instance) => (
         <TableBox
