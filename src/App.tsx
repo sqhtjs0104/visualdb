@@ -62,6 +62,21 @@ export default function App() {
     setDraftTable(next);
   };
 
+  const handleSchemaFileLoad = (next: SchemaGraph, raw: string) => {
+    setInputValue(raw);
+    handleGraphChange(next);
+  };
+
+  const handleExportSchema = () => {
+    const blob = new Blob([serializeGraph(graph)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'schema.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCancelEdit = () => {
     if (selectedTable) {
       setDraftTable(attachColumnForeignKeys(selectedTable, graph.relations));
@@ -225,7 +240,13 @@ export default function App() {
                 ✕
               </button>
             </div>
-            <SchemaInputPanel value={inputValue} onChange={setInputValue} onSubmit={handleGraphChange} />
+            <SchemaInputPanel
+              value={inputValue}
+              onChange={setInputValue}
+              onSubmit={handleGraphChange}
+              onLoadFromFile={handleSchemaFileLoad}
+              onExport={handleExportSchema}
+            />
           </div>
         </div>
       )}
