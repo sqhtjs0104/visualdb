@@ -119,7 +119,7 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
 
   return (
     <Canvas shadows className="canvas-wrapper" camera={{ position: cameraPosition, fov: 50 }}>
-      <color attach="background" args={["#0d1117"]} />
+      <color attach="background" args={["#e5e7ec"]} />
       <hemisphereLight intensity={0.4} groundColor="#0f172a" />
       <directionalLight position={[8, 12, 6]} intensity={0.85} castShadow />
       <OrbitControls

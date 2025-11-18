@@ -140,6 +140,7 @@ button:active {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+  z-index: 10;
 }
 
 .overlay-content {
@@ -352,11 +353,10 @@ small {
 }
 
 .table-label {
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  border-radius: 10px;
+  background: rgba(214, 214, 214, 0.95);
+  border-radius: 4px;
   padding: 4px 8px;
-  color: #e2e8f0;
+  color: #343536;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
