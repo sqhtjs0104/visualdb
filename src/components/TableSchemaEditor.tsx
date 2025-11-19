@@ -79,6 +79,33 @@ export function TableSchemaEditor({ table, tables, onChange }: Props) {
 
   return (
     <div className="schema-panel__table">
+      <div className="schema-panel__meta">
+        <div className="input-group">
+          <label className="label" htmlFor="table-name-input">
+            테이블명
+          </label>
+          <input
+            id="table-name-input"
+            className="text-input"
+            value={table.name}
+            onChange={(e) => onChange({ ...table, name: e.target.value })}
+            placeholder="테이블 이름"
+          />
+        </div>
+        <div className="input-group">
+          <label className="label" htmlFor="table-comment-input">
+            테이블 Comment
+          </label>
+          <textarea
+            id="table-comment-input"
+            className="text-input schema-panel__comment-input"
+            value={table.comment ?? ''}
+            onChange={(e) => onChange({ ...table, comment: e.target.value })}
+            placeholder="테이블 설명"
+            rows={2}
+          />
+        </div>
+      </div>
       <div className="schema-table__header schema-table__header--editable">
         <span style={{ width: '80px', }}>컬럼</span>
         <span style={{ width: '80px', }}>타입</span>
