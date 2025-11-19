@@ -125,12 +125,16 @@ function TableBox({
   colors,
   isInvalid,
   onPointerDown,
+  isLayerDraftMode,
+  isLayerDraftSelected,
 }: TableInstance & {
   isActive: boolean;
   onSelect: () => void;
   colors: SchemaColor;
   isInvalid?: boolean;
   onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
+  isLayerDraftMode?: boolean;
+  isLayerDraftSelected?: boolean;
 }) {
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
@@ -166,9 +170,25 @@ function TableBox({
       >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
         <meshStandardMaterial
-          color={isInvalid ? '#f87171' : isActive ? colors.activeFill : colors.fill}
-          emissive={isInvalid ? '#b91c1c' : isActive ? colors.activeEmissive : colors.emissive}
-          opacity={isInvalid ? 0.82 : 0.98}
+          color={
+            isInvalid
+              ? '#f87171'
+              : isLayerDraftMode && !isLayerDraftSelected
+              ? adjustColor(colors.fill, 0.3)
+              : isActive
+              ? colors.activeFill
+              : colors.fill
+          }
+          emissive={
+            isInvalid
+              ? '#b91c1c'
+              : isLayerDraftMode && !isLayerDraftSelected
+              ? adjustColor(colors.emissive, 0.3)
+              : isActive
+              ? colors.activeEmissive
+              : colors.emissive
+          }
+          opacity={isInvalid ? 0.82 : isLayerDraftMode ? (isLayerDraftSelected ? 0.95 : 0.26) : 0.98}
           transparent
         />
       </mesh>
@@ -296,6 +316,8 @@ function SceneContent({
   isLayoutEditing,
   onLayoutChange,
   onDragFeedbackChange,
+  isLayerDraftMode,
+  layerDraftSelection,
 }: {
   graph: SchemaGraph;
   activeTable?: string;
@@ -306,6 +328,8 @@ function SceneContent({
   isLayoutEditing: boolean;
   onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
   onDragFeedbackChange: (feedback: DragFeedback) => void;
+  isLayerDraftMode?: boolean;
+  layerDraftSelection?: Set<string>;
 }) {
   const instances = useTableInstances(graph);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -481,6 +505,8 @@ function SceneContent({
           onSelect={() => onSelect(instance.table.name)}
           isInvalid={dragState?.tableName === instance.table.name && !dragState.isValid}
           onPointerDown={(event) => handleTablePointerDown(instance, event)}
+          isLayerDraftMode={isLayerDraftMode}
+          isLayerDraftSelected={layerDraftSelection?.has(instance.table.name)}
         />
       ))}
 
@@ -512,9 +538,19 @@ interface SceneProps {
   onSelect: (table: string) => void;
   isLayoutEditing: boolean;
   onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
+  isLayerDraftMode?: boolean;
+  layerDraftSelection?: Set<string>;
 }
 
-export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayoutChange }: SceneProps) {
+export function Scene3D({
+  graph,
+  activeTable,
+  onSelect,
+  isLayoutEditing,
+  onLayoutChange,
+  isLayerDraftMode,
+  layerDraftSelection,
+}: SceneProps) {
   const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
   const domainColorMap = useMemo(() => buildDomainColorMap(graph.tables), [graph.tables]);
   const [hoveredRelation, setHoveredRelation] = useState<{
@@ -551,6 +587,8 @@ export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayou
           isLayoutEditing={isLayoutEditing}
           onLayoutChange={onLayoutChange}
           onDragFeedbackChange={setDragFeedback}
+          isLayerDraftMode={isLayerDraftMode}
+          layerDraftSelection={layerDraftSelection}
         />
       </Canvas>
 
