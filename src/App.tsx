@@ -128,6 +128,12 @@ export default function App() {
   const [isFlowEditing, setIsFlowEditing] = React.useState(false);
   const [isCreatingTable, setIsCreatingTable] = React.useState(false);
   const [tableEditOrigin, setTableEditOrigin] = React.useState<string | null>(null);
+  const [tableLayerPopup, setTableLayerPopup] = React.useState<{
+    tableName: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const tableLayerPopupRef = React.useRef<HTMLDivElement | null>(null);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
@@ -158,6 +164,20 @@ export default function App() {
       setActiveTable(undefined);
     }
   }, [activeTable, displayedGraph.tables]);
+
+  React.useEffect(() => {
+    if (!tableLayerPopup) return;
+    const handleWindowMouseDown = (event: MouseEvent) => {
+      if (!tableLayerPopupRef.current) return;
+      if (!tableLayerPopupRef.current.contains(event.target as Node)) {
+        setTableLayerPopup(null);
+      }
+    };
+    window.addEventListener('mousedown', handleWindowMouseDown);
+    return () => {
+      window.removeEventListener('mousedown', handleWindowMouseDown);
+    };
+  }, [tableLayerPopup]);
 
   const handleGraphChange = React.useCallback(
     (next: SchemaGraph, options?: { preserveActive?: boolean; skipPersist?: boolean }) => {
@@ -210,7 +230,12 @@ export default function App() {
     setDraftTable(next);
   };
 
-  const handleTableSelect = (tableName: string) => {
+  const handleTableSelect = (
+    tableName: string,
+    options?: {
+      pointer?: { x: number; y: number };
+    }
+  ) => {
     if (isLayerCreation || isScenarioEditing) {
       setLayerDraftSelection((prev) => {
         const next = new Set(prev);
@@ -228,6 +253,13 @@ export default function App() {
       setIsEditing(false);
       setTableEditOrigin(null);
     }
+
+    if (options?.pointer) {
+      setTableLayerPopup({ tableName, x: options.pointer.x, y: options.pointer.y });
+    } else {
+      setTableLayerPopup(null);
+    }
+
     setActiveTable(tableName);
   };
 
@@ -323,6 +355,7 @@ export default function App() {
   };
 
   const handleLayerSelect = (layerId: string | null) => {
+    setTableLayerPopup(null);
     setActiveLayerId(layerId);
     setIsLayerCreation(false);
     setIsScenarioEditing(false);
@@ -494,6 +527,13 @@ export default function App() {
     () => flowDrafts.map((step, index) => ({ ...step, order: index + 1 })),
     [flowDrafts]
   );
+  const popupLayers = React.useMemo(
+    () =>
+      tableLayerPopup
+        ? layers.filter((layer) => layer.tableNames.includes(tableLayerPopup.tableName))
+        : [],
+    [layers, tableLayerPopup]
+  );
 
   const resetFlowDraftsFromLayer = React.useCallback(() => {
     setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
@@ -564,6 +604,44 @@ export default function App() {
           isLayerDraftMode={isLayerDraftMode}
           layerDraftSelection={layerDraftSelection}
         />
+        {tableLayerPopup && (
+          <div
+            ref={tableLayerPopupRef}
+            className="table-layer-popup"
+            style={{ top: tableLayerPopup.y + 12, left: tableLayerPopup.x + 12 }}
+          >
+            <div className="table-layer-popup__header">
+              <div className="table-layer-popup__title">
+                <span className="table-layer-popup__subtitle">시나리오 레이어</span>
+                <strong className="table-layer-popup__table-name">{tableLayerPopup.tableName}</strong>
+              </div>
+              <button
+                type="button"
+                className="table-layer-popup__close"
+                aria-label="레이어 팝업 닫기"
+                onClick={() => setTableLayerPopup(null)}
+              >
+                ×
+              </button>
+            </div>
+            {popupLayers.length === 0 ? (
+              <div className="table-layer-popup__empty">이 테이블을 포함하는 레이어가 없습니다.</div>
+            ) : (
+              <div className="table-layer-popup__list">
+                {popupLayers.map((layer) => (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    className={`table-layer-popup__item ${activeLayerId === layer.id ? 'table-layer-popup__item--active' : ''}`}
+                    onClick={() => handleLayerSelect(layer.id)}
+                  >
+                    {layer.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="overlay-panel">
           <div
             className="title"

@@ -129,7 +129,7 @@ function TableBox({
   isLayerDraftSelected,
 }: TableInstance & {
   isActive: boolean;
-  onSelect: () => void;
+  onSelect: (event: ThreeEvent<MouseEvent>) => void;
   colors: SchemaColor;
   isInvalid?: boolean;
   onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
@@ -151,7 +151,14 @@ function TableBox({
   }, []);
 
   return (
-    <group position={position} onClick={onSelect} onPointerDown={onPointerDown}>
+    <group
+      position={position}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(event);
+      }}
+      onPointerDown={onPointerDown}
+    >
       <mesh
         castShadow
         receiveShadow
@@ -321,7 +328,7 @@ function SceneContent({
 }: {
   graph: SchemaGraph;
   activeTable?: string;
-  onSelect: (table: string) => void;
+  onSelect: (table: string, options?: { pointer?: { x: number; y: number } }) => void;
   domainColorMap: Record<string, SchemaColor>;
   onRelationHover: (relation: Relation, event: ThreeEvent<PointerEvent>) => void;
   onRelationLeave: () => void;
@@ -415,6 +422,13 @@ function SceneContent({
     [graph.positions, isLayoutEditing, onDragFeedbackChange, onSelect]
   );
 
+  const handleTableClick = useCallback(
+    (tableName: string, event: ThreeEvent<MouseEvent>) => {
+      onSelect(tableName, { pointer: { x: event.clientX, y: event.clientY } });
+    },
+    [onSelect]
+  );
+
   useEffect(() => {
     if (!dragState) return;
 
@@ -502,7 +516,7 @@ function SceneContent({
           {...instance}
           isActive={activeTable === instance.table.name}
           colors={domainColorMap[instance.table.domain] ?? DEFAULT_SCHEMA_COLOR}
-          onSelect={() => onSelect(instance.table.name)}
+          onSelect={(event) => handleTableClick(instance.table.name, event)}
           isInvalid={dragState?.tableName === instance.table.name && !dragState.isValid}
           onPointerDown={(event) => handleTablePointerDown(instance, event)}
           isLayerDraftMode={isLayerDraftMode}
@@ -535,7 +549,7 @@ function SceneContent({
 interface SceneProps {
   graph: SchemaGraph;
   activeTable?: string;
-  onSelect: (table: string) => void;
+  onSelect: (table: string, options?: { pointer?: { x: number; y: number } }) => void;
   isLayoutEditing: boolean;
   onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
   isLayerDraftMode?: boolean;
