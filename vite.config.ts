@@ -6,11 +6,11 @@ import { promises as fs } from 'node:fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const schemaPath = resolve(__dirname, 'schema.json');
+const schemaPath = resolve(__dirname, 'schemaGraph.json');
 
 function schemaMiddleware() {
   return async (req: any, res: any, next: any) => {
-    if (req.url !== '/schema.json') return next();
+    if (req.url !== '/schemaGraph.json') return next();
 
     if (req.method === 'GET') {
       try {
@@ -19,7 +19,7 @@ function schemaMiddleware() {
         res.end(content);
       } catch (error) {
         res.statusCode = 404;
-        res.end(JSON.stringify({ error: 'schema.json not found', details: (error as Error).message }));
+        res.end(JSON.stringify({ error: 'schemaGraph.json not found', details: (error as Error).message }));
       }
       return;
     }
@@ -41,7 +41,7 @@ function schemaMiddleware() {
         res.end(JSON.stringify({ status: 'ok' }));
       } catch (error) {
         res.statusCode = 400;
-        res.end(JSON.stringify({ error: 'Failed to write schema.json', details: (error as Error).message }));
+        res.end(JSON.stringify({ error: 'Failed to write schemaGraph.json', details: (error as Error).message }));
       }
       return;
     }
