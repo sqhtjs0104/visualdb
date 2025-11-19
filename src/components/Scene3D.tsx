@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Canvas, ThreeEvent } from '@react-three/fiber';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
 import { Html, Line, OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
 import { Relation, SchemaGraph, Table } from '../types';
 
 type SchemaColor = {
@@ -80,6 +81,8 @@ const BOX_DIMENSIONS = {
   depth: 1.6,
 };
 
+const BOX_PADDING = 0.3;
+
 // const EDGE_HEIGHT = BOX_DIMENSIONS.height;
 const EDGE_HEIGHT = 0;
 
@@ -103,9 +106,9 @@ function computeFallbackPositions(tables: Table[]): Record<string, [number, numb
 function useTableInstances(graph: SchemaGraph): TableInstance[] {
   return useMemo(() => {
     const fallback = computeFallbackPositions(graph.tables);
-    const planeHeight = 0;
     return graph.tables.map((table) => {
       const layout = graph.layout?.nodes?.[table.name];
+      const planeHeight = layout?.y ?? 0;
       const position: [number, number, number] = layout
         ? [layout.x, planeHeight, layout.z]
         : fallback[table.name] ?? [0, planeHeight, 0];
@@ -120,7 +123,15 @@ function TableBox({
   isActive,
   onSelect,
   colors,
-}: TableInstance & { isActive: boolean; onSelect: () => void; colors: SchemaColor }) {
+  isInvalid,
+  onPointerDown,
+}: TableInstance & {
+  isActive: boolean;
+  onSelect: () => void;
+  colors: SchemaColor;
+  isInvalid?: boolean;
+  onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
+}) {
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
   }, []);
@@ -136,7 +147,7 @@ function TableBox({
   }, []);
 
   return (
-    <group position={position} onClick={onSelect}>
+    <group position={position} onClick={onSelect} onPointerDown={onPointerDown}>
       <mesh
         castShadow
         receiveShadow
@@ -155,9 +166,9 @@ function TableBox({
       >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
         <meshStandardMaterial
-          color={isActive ? colors.activeFill : colors.fill}
-          emissive={isActive ? colors.activeEmissive : colors.emissive}
-          opacity={0.98}
+          color={isInvalid ? '#f87171' : isActive ? colors.activeFill : colors.fill}
+          emissive={isInvalid ? '#b91c1c' : isActive ? colors.activeEmissive : colors.emissive}
+          opacity={isInvalid ? 0.82 : 0.98}
           transparent
         />
       </mesh>
@@ -208,11 +219,6 @@ function RelationEdge({
   const end: [number, number, number] = [to[0], EDGE_HEIGHT, to[2]];
   const opacity = isHovered ? 1 : isConnected ? 0.9 : hasSelection ? 0.12 : 0.2;
   const width = (isHovered || isConnected) ? 3.5 : 2.5;
-  const midpoint: [number, number, number] = useMemo(
-    () => [(start[0] + end[0]) / 2, EDGE_HEIGHT + 0.05, (start[2] + end[2]) / 2],
-    [start, end]
-  );
-
   const handlePointerOver = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       setIsHovered(true);
@@ -266,21 +272,255 @@ function RelationEdge({
   );
 }
 
+type DragState = {
+  tableName: string;
+  planeY: number;
+  startPosition: [number, number, number];
+  currentPosition: [number, number, number];
+  lastValidPosition: [number, number, number];
+  isValid: boolean;
+  lockZ: boolean;
+};
+
+type DragFeedback = { message: string; isError?: boolean } | null;
+
+function SceneContent({
+  graph,
+  activeTable,
+  onSelect,
+  schemaColorMap,
+  onRelationHover,
+  onRelationLeave,
+  isLayoutEditing,
+  onLayoutChange,
+  onDragFeedbackChange,
+}: {
+  graph: SchemaGraph;
+  activeTable?: string;
+  onSelect: (table: string) => void;
+  schemaColorMap: Record<string, SchemaColor>;
+  onRelationHover: (relation: Relation, event: ThreeEvent<PointerEvent>) => void;
+  onRelationLeave: () => void;
+  isLayoutEditing: boolean;
+  onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
+  onDragFeedbackChange: (feedback: DragFeedback) => void;
+}) {
+  const instances = useTableInstances(graph);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const controlsRef = useRef<any>(null);
+  const { camera, gl } = useThree();
+
+  const displayedInstances = useMemo(() => {
+    if (!dragState) return instances;
+    return instances.map((instance) =>
+      instance.table.name === dragState.tableName
+        ? { ...instance, position: dragState.currentPosition }
+        : instance
+    );
+  }, [dragState, instances]);
+
+  const nodeLookup = useMemo(
+    () => Object.fromEntries(displayedInstances.map((i) => [i.table.name, i.position])),
+    [displayedInstances]
+  );
+
+  const halfWidth = BOX_DIMENSIONS.width / 2 + BOX_PADDING;
+  const halfDepth = BOX_DIMENSIONS.depth / 2 + BOX_PADDING;
+
+  const boundsForPosition = useCallback(
+    (position: [number, number, number]) => ({
+      minX: position[0] - halfWidth,
+      maxX: position[0] + halfWidth,
+      minZ: position[2] - halfDepth,
+      maxZ: position[2] + halfDepth,
+    }),
+    [halfDepth, halfWidth]
+  );
+
+  const findOverlaps = useCallback(
+    (candidate: [number, number, number], tableName: string) => {
+      const candidateBounds = boundsForPosition(candidate);
+      return instances
+        .filter((instance) => instance.table.name !== tableName)
+        .filter((instance) => {
+          const bounds = boundsForPosition(instance.position);
+          return !(
+            candidateBounds.maxX < bounds.minX ||
+            candidateBounds.minX > bounds.maxX ||
+            candidateBounds.maxZ < bounds.minZ ||
+            candidateBounds.minZ > bounds.maxZ
+          );
+        })
+        .map((instance) => instance.table.name);
+    },
+    [boundsForPosition, instances]
+  );
+
+  useEffect(() => {
+    if (!isLayoutEditing && dragState) {
+      setDragState(null);
+      onDragFeedbackChange(null);
+    }
+  }, [dragState, isLayoutEditing, onDragFeedbackChange]);
+
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    // @ts-expect-error - OrbitControls type is compatible but not exported directly
+    controlsRef.current.enabled = !Boolean(dragState);
+  }, [dragState]);
+
+  const handleTablePointerDown = useCallback(
+    (instance: TableInstance, event: ThreeEvent<PointerEvent>) => {
+      if (!isLayoutEditing) return;
+      event.stopPropagation();
+      const layoutY = graph.layout?.nodes?.[instance.table.name]?.y ?? instance.position[1] ?? 0;
+      const lockZ = event.shiftKey;
+      setDragState({
+        tableName: instance.table.name,
+        planeY: layoutY,
+        startPosition: instance.position,
+        currentPosition: instance.position,
+        lastValidPosition: instance.position,
+        isValid: true,
+        lockZ,
+      });
+      onDragFeedbackChange({ message: lockZ ? 'Z locked while dragging' : 'Drag tables on the X–Z plane' });
+      onSelect(instance.table.name);
+    },
+    [graph.layout?.nodes, isLayoutEditing, onDragFeedbackChange, onSelect]
+  );
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -dragState.planeY);
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = gl.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const intersection = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(plane, intersection);
+      if (!hit) return;
+      const lockZ = event.shiftKey || dragState.lockZ;
+      const candidate: [number, number, number] = [intersection.x, dragState.planeY, lockZ ? dragState.startPosition[2] : intersection.z];
+      const overlaps = findOverlaps(candidate, dragState.tableName);
+      const isValid = overlaps.length === 0;
+
+      setDragState((prev) =>
+        prev
+          ? {
+              ...prev,
+              lockZ,
+              currentPosition: candidate,
+              lastValidPosition: isValid ? candidate : prev.lastValidPosition,
+              isValid,
+            }
+          : prev
+      );
+
+      onDragFeedbackChange(
+        isValid
+          ? lockZ
+            ? { message: 'Z locked while dragging' }
+            : { message: 'Drag tables on the X–Z plane' }
+          : { message: `Placement overlaps ${overlaps.join(', ')}`, isError: true }
+      );
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      event.preventDefault();
+      setDragState((current) => {
+        if (!current) return current;
+        const finalPosition = current.isValid ? current.currentPosition : current.lastValidPosition;
+        const shouldPersist =
+          finalPosition[0] !== current.startPosition[0] ||
+          finalPosition[2] !== current.startPosition[2];
+        if (shouldPersist) {
+          onLayoutChange(current.tableName, finalPosition, { lockZ: current.lockZ });
+        }
+        onDragFeedbackChange(null);
+        return null;
+      });
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      onDragFeedbackChange(null);
+    };
+  }, [camera, dragState, findOverlaps, gl, onDragFeedbackChange, onLayoutChange]);
+
+  return (
+    <>
+      <OrbitControls
+        ref={controlsRef}
+        makeDefault
+        enablePan
+        enableRotate
+        enableZoom
+        enableDamping
+        dampingFactor={0.06}
+        autoRotate={false}
+        target={[0, 0.4, 0]}
+      />
+
+      {displayedInstances.map((instance) => (
+        <TableBox
+          key={instance.table.name}
+          {...instance}
+          isActive={activeTable === instance.table.name}
+          colors={schemaColorMap[instance.table.schema] ?? DEFAULT_SCHEMA_COLOR}
+          onSelect={() => onSelect(instance.table.name)}
+          isInvalid={dragState?.tableName === instance.table.name && !dragState.isValid}
+          onPointerDown={(event) => handleTablePointerDown(instance, event)}
+        />
+      ))}
+
+      {graph.relations.map((rel) => {
+        const from = nodeLookup[rel.fromTable];
+        const to = nodeLookup[rel.toTable];
+        if (!from || !to) return null;
+        const isConnected = activeTable === rel.fromTable || activeTable === rel.toTable;
+        return (
+          <RelationEdge
+            key={rel.name}
+            from={from}
+            to={to}
+            isConnected={isConnected}
+            hasSelection={Boolean(activeTable)}
+            relation={rel}
+            onHover={onRelationHover}
+            onLeave={onRelationLeave}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 interface SceneProps {
   graph: SchemaGraph;
   activeTable?: string;
   onSelect: (table: string) => void;
+  isLayoutEditing: boolean;
+  onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
 }
 
-export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
-  const instances = useTableInstances(graph);
-  const nodeLookup = useMemo(() => Object.fromEntries(instances.map((i) => [i.table.name, i.position])), [instances]);
+export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayoutChange }: SceneProps) {
   const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
   const schemaColorMap = useMemo(() => buildSchemaColorMap(graph.tables), [graph.tables]);
   const [hoveredRelation, setHoveredRelation] = useState<{
     relation: Relation;
     pointer: { x: number; y: number };
   } | null>(null);
+  const [dragFeedback, setDragFeedback] = useState<DragFeedback>(null);
 
   const handleRelationHover = useCallback((relation: Relation, event: ThreeEvent<PointerEvent>) => {
     setHoveredRelation({
@@ -299,45 +539,18 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
         <color attach="background" args={["#e5e7ec"]} />
         <hemisphereLight intensity={0.4} groundColor="#0f172a" />
         <directionalLight position={[8, 12, 6]} intensity={0.85} castShadow />
-        <OrbitControls
-          makeDefault
-          enablePan
-          enableRotate
-          enableZoom
-          enableDamping
-          dampingFactor={0.06}
-          autoRotate={false}
-          target={[0, 0.4, 0]}
+
+        <SceneContent
+          graph={graph}
+          activeTable={activeTable}
+          onSelect={onSelect}
+          schemaColorMap={schemaColorMap}
+          onRelationHover={handleRelationHover}
+          onRelationLeave={handleRelationLeave}
+          isLayoutEditing={isLayoutEditing}
+          onLayoutChange={onLayoutChange}
+          onDragFeedbackChange={setDragFeedback}
         />
-
-        {instances.map((instance) => (
-          <TableBox
-            key={instance.table.name}
-            {...instance}
-            isActive={activeTable === instance.table.name}
-            colors={schemaColorMap[instance.table.schema] ?? DEFAULT_SCHEMA_COLOR}
-            onSelect={() => onSelect(instance.table.name)}
-          />
-        ))}
-
-        {graph.relations.map((rel) => {
-          const from = nodeLookup[rel.fromTable];
-          const to = nodeLookup[rel.toTable];
-          if (!from || !to) return null;
-          const isConnected = activeTable === rel.fromTable || activeTable === rel.toTable;
-          return (
-            <RelationEdge
-              key={rel.name}
-              from={from}
-              to={to}
-              isConnected={isConnected}
-              hasSelection={Boolean(activeTable)}
-              relation={rel}
-              onHover={handleRelationHover}
-              onLeave={handleRelationLeave}
-            />
-          );
-        })}
       </Canvas>
 
       {Object.entries(schemaColorMap).length > 0 && (
@@ -351,6 +564,12 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {dragFeedback && (
+        <div className={`drag-feedback ${dragFeedback.isError ? 'drag-feedback--error' : ''}`}>
+          {dragFeedback.message}
         </div>
       )}
 

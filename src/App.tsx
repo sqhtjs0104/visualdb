@@ -64,6 +64,7 @@ export default function App() {
   const [graph, setGraph] = React.useState<SchemaGraph>(mockGraph);
   const [inputValue, setInputValue] = React.useState<string>(serializeGraph(mockGraph));
   const [activeTable, setActiveTable] = React.useState<string | undefined>();
+  const [isLayoutEditing, setIsLayoutEditing] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [draftTable, setDraftTable] = React.useState<Table | null>(null);
   const [isSchemaModalOpen, setIsSchemaModalOpen] = React.useState(false);
@@ -107,6 +108,24 @@ export default function App() {
   const handleDraftChange = (next: Table) => {
     setDraftTable(next);
   };
+
+  const handleLayoutChange = React.useCallback(
+    (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => {
+      const nodes = { ...(graph.layout?.nodes ?? {}) };
+      const previous = nodes[tableName];
+      const y = previous?.y ?? position[1];
+      const z = options?.lockZ && previous ? previous.z : position[2];
+      nodes[tableName] = { x: position[0], y, z };
+      handleGraphChange(
+        {
+          ...graph,
+          layout: { nodes },
+        },
+        { preserveActive: true }
+      );
+    },
+    [graph, handleGraphChange]
+  );
 
   const handleSchemaFileLoad = (next: SchemaGraph, raw: string) => {
     setInputValue(raw);
@@ -186,7 +205,13 @@ export default function App() {
         </button>
       </div>
       <main className="main-panel">
-        <Scene3D graph={graph} activeTable={activeTable} onSelect={setActiveTable} />
+        <Scene3D
+          graph={graph}
+          activeTable={activeTable}
+          onSelect={setActiveTable}
+          isLayoutEditing={isLayoutEditing}
+          onLayoutChange={handleLayoutChange}
+        />
         <div className="overlay-panel">
           <div className="title" style={{ marginBottom: 12 }}>
             <span>테이블 선택</span>
@@ -276,7 +301,19 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="scene-footer">Orbit: 드래그 · Zoom: 휠 · Pan: 우클릭</div>
+        <div className="scene-footer">
+          <div className="scene-footer__controls">
+            <button
+              type="button"
+              className={`small-button ${isLayoutEditing ? 'small-button--active' : ''}`}
+              onClick={() => setIsLayoutEditing((prev) => !prev)}
+            >
+              {isLayoutEditing ? '레이아웃 편집 종료' : '레이아웃 편집'}
+            </button>
+            <span className="scene-footer__hint">드래그로 위치 변경 · Shift 로 Z 고정</span>
+          </div>
+          <div>Orbit: 드래그 · Zoom: 휠 · Pan: 우클릭</div>
+        </div>
       </main>
       {isSchemaModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsSchemaModalOpen(false)}>
