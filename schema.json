@@ -1,9 +1,8 @@
 {
-  "schema": "ecommerce",
   "tables": [
     {
       "name": "users",
-      "schema": "ecommerce",
+      "domain": "ecommerce",
       "primaryKey": [
         "id"
       ],
@@ -45,12 +44,11 @@
           ],
           "unique": true
         }
-      ],
-      "relations": []
+      ]
     },
     {
       "name": "orders",
-      "schema": "ecommerce",
+      "domain": "ecommerce",
       "primaryKey": [
         "id"
       ],
@@ -96,26 +94,11 @@
           ],
           "unique": false
         }
-      ],
-      "relations": [
-        {
-          "name": "fk_orders_user",
-          "fromTable": "orders",
-          "fromColumns": [
-            "user_id"
-          ],
-          "toTable": "users",
-          "toColumns": [
-            "id"
-          ],
-          "onUpdate": "CASCADE",
-          "onDelete": "CASCADE"
-        }
       ]
     },
     {
       "name": "order_items",
-      "schema": "ecommerce",
+      "domain": "ecommerce",
       "primaryKey": [
         "id"
       ],
@@ -162,39 +145,11 @@
           ],
           "unique": false
         }
-      ],
-      "relations": [
-        {
-          "name": "fk_order_items_order",
-          "fromTable": "order_items",
-          "fromColumns": [
-            "order_id"
-          ],
-          "toTable": "orders",
-          "toColumns": [
-            "id"
-          ],
-          "onUpdate": "CASCADE",
-          "onDelete": "CASCADE"
-        },
-        {
-          "name": "fk_order_items_product",
-          "fromTable": "order_items",
-          "fromColumns": [
-            "product_id"
-          ],
-          "toTable": "products",
-          "toColumns": [
-            "id"
-          ],
-          "onUpdate": "NO ACTION",
-          "onDelete": "RESTRICT"
-        }
       ]
     },
     {
       "name": "products",
-      "schema": "ecommerce",
+      "domain": "ecommerce",
       "primaryKey": [
         "id"
       ],
@@ -241,8 +196,7 @@
           ],
           "unique": true
         }
-      ],
-      "relations": []
+      ]
     }
   ],
   "relations": [
@@ -286,28 +240,26 @@
       "onDelete": "RESTRICT"
     }
   ],
-  "layout": {
-    "nodes": {
-      "users": {
-        "x": -1.8168523419907663,
-        "y": 0,
-        "z": -0.5317563293623335
-      },
-      "orders": {
-        "x": -3.848560592454575,
-        "y": 0,
-        "z": 2.317856552741336
-      },
-      "order_items": {
-        "x": 4.057976925287446,
-        "y": 0,
-        "z": 1.1663736926511499
-      },
-      "products": {
-        "x": 2.17750128621276,
-        "y": 0,
-        "z": -1.7747422598809406
-      }
+  "positions": {
+    "users": {
+      "x": -1.8168523419907663,
+      "y": 0,
+      "z": -0.5317563293623335
+    },
+    "orders": {
+      "x": -3.848560592454575,
+      "y": 0,
+      "z": 2.317856552741336
+    },
+    "order_items": {
+      "x": 4.057976925287446,
+      "y": 0,
+      "z": 1.1663736926511499
+    },
+    "products": {
+      "x": 2.17750128621276,
+      "y": 0,
+      "z": -1.7747422598809406
     }
   }
 }

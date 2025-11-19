@@ -55,12 +55,12 @@ function adjustColor(hex: string, amount: number) {
   return `#${toHex(transform(r))}${toHex(transform(g))}${toHex(transform(b))}`;
 }
 
-function buildSchemaColorMap(tables: Table[]): Record<string, SchemaColor> {
-  const schemas = Array.from(new Set(tables.map((table) => table.schema))).sort();
+function buildDomainColorMap(tables: Table[]): Record<string, SchemaColor> {
+  const domains = Array.from(new Set(tables.map((table) => table.domain))).sort();
 
-  return schemas.reduce((acc, schema, index) => {
+  return domains.reduce((acc, domain, index) => {
     const baseColor = SCHEMA_COLOR_PALETTE[index % SCHEMA_COLOR_PALETTE.length];
-    acc[schema] = {
+    acc[domain] = {
       fill: baseColor,
       emissive: adjustColor(baseColor, -0.45),
       activeFill: adjustColor(baseColor, 0.18),
@@ -107,10 +107,10 @@ function useTableInstances(graph: SchemaGraph): TableInstance[] {
   return useMemo(() => {
     const fallback = computeFallbackPositions(graph.tables);
     return graph.tables.map((table) => {
-      const layout = graph.layout?.nodes?.[table.name];
-      const planeHeight = layout?.y ?? 0;
-      const position: [number, number, number] = layout
-        ? [layout.x, planeHeight, layout.z]
+      const savedPosition = graph.positions?.[table.name];
+      const planeHeight = savedPosition?.y ?? 0;
+      const position: [number, number, number] = savedPosition
+        ? [savedPosition.x, planeHeight, savedPosition.z]
         : fallback[table.name] ?? [0, planeHeight, 0];
       return { table, position };
     });
@@ -290,7 +290,7 @@ function SceneContent({
   graph,
   activeTable,
   onSelect,
-  schemaColorMap,
+  domainColorMap,
   onRelationHover,
   onRelationLeave,
   isLayoutEditing,
@@ -300,7 +300,7 @@ function SceneContent({
   graph: SchemaGraph;
   activeTable?: string;
   onSelect: (table: string) => void;
-  schemaColorMap: Record<string, SchemaColor>;
+  domainColorMap: Record<string, SchemaColor>;
   onRelationHover: (relation: Relation, event: ThreeEvent<PointerEvent>) => void;
   onRelationLeave: () => void;
   isLayoutEditing: boolean;
@@ -374,7 +374,7 @@ function SceneContent({
     (instance: TableInstance, event: ThreeEvent<PointerEvent>) => {
       if (!isLayoutEditing) return;
       event.stopPropagation();
-      const layoutY = graph.layout?.nodes?.[instance.table.name]?.y ?? instance.position[1] ?? 0;
+      const layoutY = graph.positions?.[instance.table.name]?.y ?? instance.position[1] ?? 0;
       const lockZ = event.shiftKey;
       setDragState({
         tableName: instance.table.name,
@@ -388,7 +388,7 @@ function SceneContent({
       onDragFeedbackChange({ message: lockZ ? 'Z locked while dragging' : 'Drag tables on the X–Z plane' });
       onSelect(instance.table.name);
     },
-    [graph.layout?.nodes, isLayoutEditing, onDragFeedbackChange, onSelect]
+    [graph.positions, isLayoutEditing, onDragFeedbackChange, onSelect]
   );
 
   useEffect(() => {
@@ -477,7 +477,7 @@ function SceneContent({
           key={instance.table.name}
           {...instance}
           isActive={activeTable === instance.table.name}
-          colors={schemaColorMap[instance.table.schema] ?? DEFAULT_SCHEMA_COLOR}
+          colors={domainColorMap[instance.table.domain] ?? DEFAULT_SCHEMA_COLOR}
           onSelect={() => onSelect(instance.table.name)}
           isInvalid={dragState?.tableName === instance.table.name && !dragState.isValid}
           onPointerDown={(event) => handleTablePointerDown(instance, event)}
@@ -516,7 +516,7 @@ interface SceneProps {
 
 export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayoutChange }: SceneProps) {
   const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
-  const schemaColorMap = useMemo(() => buildSchemaColorMap(graph.tables), [graph.tables]);
+  const domainColorMap = useMemo(() => buildDomainColorMap(graph.tables), [graph.tables]);
   const [hoveredRelation, setHoveredRelation] = useState<{
     relation: Relation;
     pointer: { x: number; y: number };
@@ -545,7 +545,7 @@ export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayou
           graph={graph}
           activeTable={activeTable}
           onSelect={onSelect}
-          schemaColorMap={schemaColorMap}
+          domainColorMap={domainColorMap}
           onRelationHover={handleRelationHover}
           onRelationLeave={handleRelationLeave}
           isLayoutEditing={isLayoutEditing}
@@ -554,14 +554,14 @@ export function Scene3D({ graph, activeTable, onSelect, isLayoutEditing, onLayou
         />
       </Canvas>
 
-      {Object.entries(schemaColorMap).length > 0 && (
+      {Object.entries(domainColorMap).length > 0 && (
         <div className="schema-legend">
-          <div className="schema-legend__title">Schemas</div>
+          <div className="schema-legend__title">Domains</div>
           <div className="schema-legend__list">
-            {Object.entries(schemaColorMap).map(([schema, colors]) => (
-              <div key={schema} className="schema-legend__item">
+            {Object.entries(domainColorMap).map(([domain, colors]) => (
+              <div key={domain} className="schema-legend__item">
                 <span className="schema-legend__swatch" style={{ background: colors.fill }} />
-                <span>{schema}</span>
+                <span>{domain}</span>
               </div>
             ))}
           </div>

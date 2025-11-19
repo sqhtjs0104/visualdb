@@ -1,11 +1,12 @@
 import React from 'react';
-import { Table } from '../types';
+import { Relation, Table } from '../types';
 
 interface Props {
   table?: Table;
+  relations?: Relation[];
 }
 
-export function ModelInfoPanel({ table }: Props) {
+export function ModelInfoPanel({ table, relations = [] }: Props) {
   if (!table) {
     return <div className="model-info">테이블을 선택하면 상세 정보가 표시됩니다.</div>;
   }
@@ -14,7 +15,7 @@ export function ModelInfoPanel({ table }: Props) {
     <div className="model-info">
       <div className="title">
         <span>{table.name}</span>
-        <span className="pill">{table.schema}</span>
+        <span className="pill">{table.domain}</span>
       </div>
       {table.comment && <div>{table.comment}</div>}
       <div>
@@ -37,8 +38,8 @@ export function ModelInfoPanel({ table }: Props) {
       <div>
         <strong>Relations (FK)</strong>
         <ul>
-          {table.relations.length === 0 && <li>없음</li>}
-          {table.relations.map((rel) => (
+          {relations.length === 0 && <li>없음</li>}
+          {relations.map((rel) => (
             <li key={rel.name}>
               {rel.name}: {rel.fromColumns.join(', ')} → {rel.toTable}.{rel.toColumns.join(', ')}{' '}
               {rel.onUpdate && `(onUpdate: ${rel.onUpdate}) `}

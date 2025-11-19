@@ -34,28 +34,22 @@ export type Relation = {
 
 export type Table = {
   name: string;
-  schema: string;
+  domain: string;
   columns: Column[];
   primaryKey: string[];
   indexes: Index[];
-  relations: Relation[];
   rowEstimate?: number;
   comment?: string;
 };
 
-export type LayoutNode = {
+export type Position = {
   x: number;
   y: number;
   z: number;
 };
 
-export type Layout = {
-  nodes: Record<string, LayoutNode>;
-};
-
 export type SchemaGraph = {
-  schema: string;
   tables: Table[];
   relations: Relation[];
-  layout?: Layout;
+  positions?: Record<string, Position>;
 };
