@@ -461,6 +461,10 @@ small {
   flex-wrap: wrap;
 }
 
+.layer-remote__edit-toggle {
+  justify-content: flex-end;
+}
+
 .layer-remote__select {
   flex: 1;
   min-width: 140px;
@@ -499,6 +503,55 @@ small {
   background: rgba(255, 255, 255, 0.02);
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.layer-remote__flow-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.layer-remote__flow-editor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.layer-remote__flow-editor__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-remote__flow-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.layer-remote__flow-input {
+  width: 100%;
+}
+
+.layer-remote__flow-controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.layer-remote__flow-remove {
+  color: #fca5a5;
+}
+
+.layer-remote__flow-empty {
+  font-size: 13px;
+  color: #cbd5e1;
 }
 
 .layer-remote__flow-list {
