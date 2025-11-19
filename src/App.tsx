@@ -108,6 +108,7 @@ export default function App() {
   const [layers, setLayers] = React.useState<Scenario[]>(defaultGraph.scenarios ?? []);
   const [activeLayerId, setActiveLayerId] = React.useState<string | null>(null);
   const [isLayerCreation, setIsLayerCreation] = React.useState(false);
+  const [isLayerEditing, setIsLayerEditing] = React.useState(false);
   const [layerDraftSelection, setLayerDraftSelection] = React.useState<Set<string>>(new Set());
   const [draftLayerName, setDraftLayerName] = React.useState('');
   const [layerNameInput, setLayerNameInput] = React.useState('');
@@ -117,7 +118,7 @@ export default function App() {
   const activeLayer = React.useMemo(() => layers.find((layer) => layer.id === activeLayerId) ?? null, [activeLayerId, layers]);
 
   const displayedGraph = React.useMemo(() => {
-    if (isLayerCreation || !activeLayer) return graph;
+    if (isLayerCreation || isLayerEditing || !activeLayer) return graph;
     const tableSet = new Set(activeLayer.tableNames);
     const tables = graph.tables.filter((table) => tableSet.has(table.name));
     const relations = graph.relations.filter(
@@ -134,7 +135,7 @@ export default function App() {
       positions,
       scenarios: graph.scenarios,
     };
-  }, [activeLayer, graph, isLayerCreation]);
+  }, [activeLayer, graph, isLayerCreation, isLayerEditing]);
 
   React.useEffect(() => {
     if (activeTable && !displayedGraph.tables.some((table) => table.name === activeTable)) {
@@ -190,7 +191,7 @@ export default function App() {
   };
 
   const handleTableSelect = (tableName: string) => {
-    if (isLayerCreation) {
+    if (isLayerCreation || isLayerEditing) {
       setLayerDraftSelection((prev) => {
         const next = new Set(prev);
         if (next.has(tableName)) {
@@ -247,12 +248,14 @@ export default function App() {
   const handleStartLayerCreation = () => {
     setActiveLayerId(null);
     setIsLayerCreation(true);
+    setIsLayerEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName(`시나리오 ${layers.length + 1}`);
   };
 
   const handleCancelLayerCreation = () => {
     setIsLayerCreation(false);
+    setIsLayerEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName('');
   };
@@ -278,12 +281,42 @@ export default function App() {
     setActiveLayerId(nextLayer.id);
     setLayerNameInput(name);
     setIsLayerCreation(false);
+    setIsLayerEditing(false);
     setLayerDraftSelection(new Set());
   };
 
   const handleLayerSelect = (layerId: string | null) => {
     setActiveLayerId(layerId);
     setIsLayerCreation(false);
+    setIsLayerEditing(false);
+    setLayerDraftSelection(new Set());
+  };
+
+  const handleStartLayerEdit = () => {
+    if (!activeLayer) return;
+    setIsLayerEditing(true);
+    setIsLayerCreation(false);
+    setLayerDraftSelection(new Set(activeLayer.tableNames));
+  };
+
+  const handleCancelLayerEdit = () => {
+    setIsLayerEditing(false);
+    setLayerDraftSelection(new Set());
+  };
+
+  const handleSaveLayerEdit = () => {
+    if (!activeLayer) return;
+    const updatedLayer: Scenario = { ...activeLayer, tableNames: Array.from(layerDraftSelection) };
+    const nextScenarios = layers.map((layer) => (layer.id === activeLayer.id ? updatedLayer : layer));
+
+    handleGraphChange(
+      {
+        ...graph,
+        scenarios: nextScenarios,
+      },
+      { preserveActive: true }
+    );
+    setIsLayerEditing(false);
     setLayerDraftSelection(new Set());
   };
 
@@ -364,10 +397,15 @@ export default function App() {
 
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
 
-  const canNavigatePrev = !isLayerCreation && activeLayerIndex > 0;
-  const canNavigateNext = !isLayerCreation && activeLayerIndex < layerSequence.length - 1;
+  const isLayerDraftMode = isLayerCreation || isLayerEditing;
+  const canNavigatePrev = !isLayerDraftMode && activeLayerIndex > 0;
+  const canNavigateNext = !isLayerDraftMode && activeLayerIndex < layerSequence.length - 1;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
+  const activeLayerSteps = React.useMemo(
+    () => [...(activeLayer?.steps ?? [])].sort((a, b) => a.order - b.order),
+    [activeLayer?.steps]
+  );
 
   return (
     <div className="app-shell">
@@ -388,7 +426,7 @@ export default function App() {
           onSelect={handleTableSelect}
           isLayoutEditing={isLayoutEditing}
           onLayoutChange={handleLayoutChange}
-          isLayerDraftMode={isLayerCreation}
+          isLayerDraftMode={isLayerDraftMode}
           layerDraftSelection={layerDraftSelection}
         />
         <div className="overlay-panel">
@@ -403,7 +441,7 @@ export default function App() {
                   type="button"
                   key={table.name}
                   className={`table-pill ${activeTable === table.name ? 'active' : ''} ${
-                    isLayerCreation ? 'table-pill--layer-draft' : ''
+                    isLayerDraftMode ? 'table-pill--layer-draft' : ''
                   } ${layerDraftSelection.has(table.name) ? 'table-pill--layer-draft-selected' : ''}`}
                   onClick={() => handleTableSelect(table.name)}
                 >
@@ -513,7 +551,7 @@ export default function App() {
                 <div className="label">현재 레이어</div>
                 <div className="layer-remote__title">{activeLayerLabel}</div>
               </div>
-              <button type="button" className="small-button" onClick={() => handleLayerSelect(null)} disabled={isLayerCreation}>
+              <button type="button" className="small-button" onClick={() => handleLayerSelect(null)} disabled={isLayerDraftMode}>
                 초기 화면
               </button>
             </div>
@@ -542,7 +580,7 @@ export default function App() {
                 className="select-input layer-remote__select"
                 value={activeLayerId ?? 'base'}
                 onChange={(e) => handleLayerSelect(e.target.value === 'base' ? null : e.target.value)}
-                disabled={isLayerCreation}
+                disabled={isLayerDraftMode}
               >
                 <option value="base">기본 뷰</option>
                 {layers.map((layer) => (
@@ -551,12 +589,20 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerCreation}>
+              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode}>
                 레이어 추가
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleStartLayerEdit}
+                disabled={isLayerDraftMode || !activeLayer}
+              >
+                레이어 편집
               </button>
             </div>
 
-            {!isLayerCreation && activeLayer && (
+            {!isLayerDraftMode && activeLayer && (
               <div className="layer-remote__row layer-remote__rename">
                 <label className="label" htmlFor="layer-name-input">
                   레이어 이름 변경
@@ -599,6 +645,37 @@ export default function App() {
                     취소
                   </button>
                 </div>
+              </div>
+            )}
+
+            {isLayerEditing && activeLayer && (
+              <div className="layer-remote__creation">
+                <div className="layer-remote__hint">편집할 테이블을 토글하세요. 선택된 항목이 현재 시나리오에 포함됩니다.</div>
+                <div className="layer-remote__draft-summary">
+                  포함 테이블: <strong>{layerDraftSelection.size}</strong>개
+                </div>
+                <div className="layer-remote__row">
+                  <button type="button" className="small-button" onClick={handleSaveLayerEdit} disabled={!canSaveLayerDraft}>
+                    저장
+                  </button>
+                  <button type="button" className="ghost-button" onClick={handleCancelLayerEdit}>
+                    취소
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isLayerDraftMode && activeLayerSteps.length > 0 && (
+              <div className="layer-remote__flow">
+                <div className="label">시나리오 플로우</div>
+                <ol className="layer-remote__flow-list">
+                  {activeLayerSteps.map((step) => (
+                    <li key={`${activeLayer?.id ?? 'layer'}-step-${step.order}`}>
+                      <span className="layer-remote__flow-order">{step.order}</span>
+                      <span>{step.description}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
           </div>
