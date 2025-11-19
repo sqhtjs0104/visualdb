@@ -108,8 +108,7 @@ export default function App() {
   const [layers, setLayers] = React.useState<Scenario[]>(defaultGraph.scenarios ?? []);
   const [activeLayerId, setActiveLayerId] = React.useState<string | null>(null);
   const [isLayerCreation, setIsLayerCreation] = React.useState(false);
-  const [isLayerEditing, setIsLayerEditing] = React.useState(false);
-  const [isFlowEditing, setIsFlowEditing] = React.useState(false);
+  const [isScenarioEditing, setIsScenarioEditing] = React.useState(false);
   const [layerDraftSelection, setLayerDraftSelection] = React.useState<Set<string>>(new Set());
   const [draftLayerName, setDraftLayerName] = React.useState('');
   const [layerNameInput, setLayerNameInput] = React.useState('');
@@ -120,7 +119,7 @@ export default function App() {
   const activeLayer = React.useMemo(() => layers.find((layer) => layer.id === activeLayerId) ?? null, [activeLayerId, layers]);
 
   const displayedGraph = React.useMemo(() => {
-    if (isLayerCreation || isLayerEditing || !activeLayer) return graph;
+    if (isLayerCreation || isScenarioEditing || !activeLayer) return graph;
     const tableSet = new Set(activeLayer.tableNames);
     const tables = graph.tables.filter((table) => tableSet.has(table.name));
     const relations = graph.relations.filter(
@@ -137,7 +136,7 @@ export default function App() {
       positions,
       scenarios: graph.scenarios,
     };
-  }, [activeLayer, graph, isLayerCreation, isLayerEditing]);
+  }, [activeLayer, graph, isLayerCreation, isScenarioEditing]);
 
   React.useEffect(() => {
     if (activeTable && !displayedGraph.tables.some((table) => table.name === activeTable)) {
@@ -193,7 +192,7 @@ export default function App() {
   };
 
   const handleTableSelect = (tableName: string) => {
-    if (isLayerCreation || isLayerEditing) {
+    if (isLayerCreation || isScenarioEditing) {
       setLayerDraftSelection((prev) => {
         const next = new Set(prev);
         if (next.has(tableName)) {
@@ -250,15 +249,14 @@ export default function App() {
   const handleStartLayerCreation = () => {
     setActiveLayerId(null);
     setIsLayerCreation(true);
-    setIsLayerEditing(false);
-    setIsFlowEditing(false);
+    setIsScenarioEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName(`시나리오 ${layers.length + 1}`);
   };
 
   const handleCancelLayerCreation = () => {
     setIsLayerCreation(false);
-    setIsLayerEditing(false);
+    setIsScenarioEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName('');
   };
@@ -284,34 +282,32 @@ export default function App() {
     setActiveLayerId(nextLayer.id);
     setLayerNameInput(name);
     setIsLayerCreation(false);
-    setIsLayerEditing(false);
+    setIsScenarioEditing(false);
     setLayerDraftSelection(new Set());
   };
 
   const handleLayerSelect = (layerId: string | null) => {
     setActiveLayerId(layerId);
     setIsLayerCreation(false);
-    setIsLayerEditing(false);
-    setIsFlowEditing(false);
+    setIsScenarioEditing(false);
     setLayerDraftSelection(new Set());
   };
 
   const handleStartScenarioEdit = () => {
     if (!activeLayer || isLayerCreation) return;
-    setIsLayerEditing(true);
+    setIsScenarioEditing(true);
     setIsLayerCreation(false);
     setIsFlowEditing(true);
     setLayerDraftSelection(new Set(activeLayer.tableNames));
     setLayerNameInput(activeLayer.name);
-    setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
+    resetFlowDraftsFromLayer();
   };
 
   const handleCancelScenarioEdit = () => {
-    setIsLayerEditing(false);
-    setIsFlowEditing(false);
-    setLayerDraftSelection(new Set());
+    setIsScenarioEditing(false);
+    setLayerDraftSelection(new Set(activeLayer?.tableNames ?? []));
     setLayerNameInput(activeLayer?.name ?? '');
-    setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
+    resetFlowDraftsFromLayer();
   };
 
   const handleFlowDraftChange = (index: number, description: string) => {
@@ -359,8 +355,7 @@ export default function App() {
       },
       { preserveActive: true }
     );
-    setIsLayerEditing(false);
-    setIsFlowEditing(false);
+    setIsScenarioEditing(false);
     setLayerDraftSelection(new Set());
   };
 
@@ -424,8 +419,9 @@ export default function App() {
 
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
 
-  const isLayerDraftMode = isLayerCreation || isLayerEditing;
-  const isScenarioEditing = isLayerEditing && isFlowEditing && !isLayerCreation;
+  const isLayerDraftMode = isLayerCreation || isScenarioEditing;
+  const canNavigatePrev = !isLayerDraftMode && activeLayerIndex > 0;
+  const canNavigateNext = !isLayerDraftMode && activeLayerIndex < layerSequence.length - 1;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
   const activeLayerSteps = React.useMemo(
@@ -437,10 +433,15 @@ export default function App() {
     [flowDrafts]
   );
 
-  React.useEffect(() => {
+  const resetFlowDraftsFromLayer = React.useCallback(() => {
     setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
-    setIsFlowEditing(false);
-  }, [activeLayerId, activeLayerSteps]);
+  }, [activeLayerSteps]);
+
+  React.useEffect(() => {
+    resetFlowDraftsFromLayer();
+    setIsScenarioEditing(false);
+    setLayerDraftSelection(new Set());
+  }, [activeLayerId, activeLayerSteps, resetFlowDraftsFromLayer]);
 
   return (
     <div className="app-shell">
@@ -585,7 +586,7 @@ export default function App() {
                       type="button"
                       className="ghost-button"
                       onClick={handleStartScenarioEdit}
-                      disabled={isLayerDraftMode || isFlowEditing}
+                      disabled={isLayerDraftMode}
                     >
                       편집
                     </button>
@@ -609,73 +610,6 @@ export default function App() {
             </div>
 
             {isScenarioEditing && activeLayer && (
-              <>
-                <div className="layer-remote__row layer-remote__rename">
-                  <label className="label" htmlFor="layer-name-input">
-                    레이어 이름 변경
-                  </label>
-                  <input
-                    id="layer-name-input"
-                    className="text-input"
-                    value={layerNameInput}
-                    onChange={(e) => handleLayerNameChange(e.target.value)}
-                    placeholder="레이어 이름"
-                  />
-                </div>
-                <div className="layer-remote__flow-editor">
-                  <div className="layer-remote__flow-editor__header">
-                    <span className="label">시나리오 플로우</span>
-                    <button type="button" className="small-button" onClick={handleAddFlowDraft}>
-                      플로우 추가
-                    </button>
-                  </div>
-                  {flowDraftSteps.length === 0 ? (
-                    <div className="layer-remote__flow-empty">플로우를 추가해 시나리오를 구성하세요.</div>
-                  ) : (
-                    <div className="layer-remote__flow-editor__list">
-                      {flowDraftSteps.map((step, index) => (
-                        <div key={`${activeLayer.id}-draft-step-${index}`} className="layer-remote__flow-row">
-                          <span className="layer-remote__flow-order">{step.order}</span>
-                          <input
-                            className="text-input layer-remote__flow-input"
-                            value={step.description}
-                            onChange={(e) => handleFlowDraftChange(index, e.target.value)}
-                            placeholder="플로우 이름"
-                          />
-                          <div className="layer-remote__flow-controls">
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              onClick={() => handleReorderFlowDraft(index, 'up')}
-                              disabled={index === 0}
-                            >
-                              위
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              onClick={() => handleReorderFlowDraft(index, 'down')}
-                              disabled={index === flowDraftSteps.length - 1}
-                            >
-                              아래
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost-button layer-remote__flow-remove"
-                              onClick={() => handleRemoveFlowDraft(index)}
-                            >
-                              제거
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {isFlowEditing && activeLayer && (
               <>
                 <div className="layer-remote__row layer-remote__rename">
                   <label className="label" htmlFor="layer-name-input">
