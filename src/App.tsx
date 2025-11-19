@@ -7,6 +7,12 @@ import { TableSchemaEditor } from './components/TableSchemaEditor';
 
 const SCHEMA_ENDPOINT = '/schema.json';
 
+type ScenarioLayer = {
+  id: string;
+  name: string;
+  tableNames: string[];
+};
+
 function serializeGraph(graph: SchemaGraph) {
   return JSON.stringify(graph, null, 2);
 }
@@ -68,8 +74,41 @@ export default function App() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [draftTable, setDraftTable] = React.useState<Table | null>(null);
   const [isSchemaModalOpen, setIsSchemaModalOpen] = React.useState(false);
+  const [layers, setLayers] = React.useState<ScenarioLayer[]>([]);
+  const [activeLayerId, setActiveLayerId] = React.useState<string | null>(null);
+  const [isLayerCreation, setIsLayerCreation] = React.useState(false);
+  const [layerDraftSelection, setLayerDraftSelection] = React.useState<Set<string>>(new Set());
+  const [draftLayerName, setDraftLayerName] = React.useState('');
+  const [layerNameInput, setLayerNameInput] = React.useState('');
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
+
+  const activeLayer = React.useMemo(() => layers.find((layer) => layer.id === activeLayerId) ?? null, [activeLayerId, layers]);
+
+  const displayedGraph = React.useMemo(() => {
+    if (isLayerCreation || !activeLayer) return graph;
+    const tableSet = new Set(activeLayer.tableNames);
+    const tables = graph.tables.filter((table) => tableSet.has(table.name));
+    const relations = graph.relations.filter(
+      (rel) => tableSet.has(rel.fromTable) && tableSet.has(rel.toTable)
+    );
+    const positions = graph.positions
+      ? Object.fromEntries(Object.entries(graph.positions).filter(([name]) => tableSet.has(name)))
+      : undefined;
+
+    return {
+      ...graph,
+      tables,
+      relations,
+      positions,
+    };
+  }, [activeLayer, graph, isLayerCreation]);
+
+  React.useEffect(() => {
+    if (activeTable && !displayedGraph.tables.some((table) => table.name === activeTable)) {
+      setActiveTable(undefined);
+    }
+  }, [activeTable, displayedGraph.tables]);
 
   const handleGraphChange = React.useCallback(
     (next: SchemaGraph, options?: { preserveActive?: boolean; skipPersist?: boolean }) => {
@@ -107,6 +146,21 @@ export default function App() {
 
   const handleDraftChange = (next: Table) => {
     setDraftTable(next);
+  };
+
+  const handleTableSelect = (tableName: string) => {
+    if (isLayerCreation) {
+      setLayerDraftSelection((prev) => {
+        const next = new Set(prev);
+        if (next.has(tableName)) {
+          next.delete(tableName);
+        } else {
+          next.add(tableName);
+        }
+        return next;
+      });
+    }
+    setActiveTable(tableName);
   };
 
   const handleLayoutChange = React.useCallback(
@@ -148,6 +202,68 @@ export default function App() {
     }
     setIsEditing(false);
   };
+
+  const handleStartLayerCreation = () => {
+    setActiveLayerId(null);
+    setIsLayerCreation(true);
+    setLayerDraftSelection(new Set());
+    setDraftLayerName(`시나리오 ${layers.length + 1}`);
+  };
+
+  const handleCancelLayerCreation = () => {
+    setIsLayerCreation(false);
+    setLayerDraftSelection(new Set());
+    setDraftLayerName('');
+  };
+
+  const handleSaveLayerCreation = () => {
+    if (layerDraftSelection.size === 0) return;
+    const name = (draftLayerName || '').trim() || `시나리오 ${layers.length + 1}`;
+    const nextLayer: ScenarioLayer = {
+      id: `layer-${Date.now()}`,
+      name,
+      tableNames: Array.from(layerDraftSelection),
+    };
+
+    setLayers((prev) => [...prev, nextLayer]);
+    setActiveLayerId(nextLayer.id);
+    setLayerNameInput(name);
+    setIsLayerCreation(false);
+    setLayerDraftSelection(new Set());
+  };
+
+  const handleLayerSelect = (layerId: string | null) => {
+    setActiveLayerId(layerId);
+    setIsLayerCreation(false);
+    setLayerDraftSelection(new Set());
+  };
+
+  const layerSequence = React.useMemo(
+    () => [{ id: null, name: '기본 뷰' }, ...layers.map((layer) => ({ id: layer.id, name: layer.name }))],
+    [layers]
+  );
+
+  const activeLayerIndex = React.useMemo(
+    () => layerSequence.findIndex((layer) => layer.id === activeLayerId),
+    [activeLayerId, layerSequence]
+  );
+
+  const handleNavigateLayer = (direction: 'prev' | 'next') => {
+    const delta = direction === 'prev' ? -1 : 1;
+    const nextIndex = activeLayerIndex + delta;
+    if (nextIndex < 0 || nextIndex >= layerSequence.length) return;
+    const targetLayer = layerSequence[nextIndex];
+    handleLayerSelect(targetLayer.id);
+  };
+
+  const handleLayerNameChange = (name: string) => {
+    setLayerNameInput(name);
+    setLayers((prev) => prev.map((layer) => (layer.id === activeLayerId ? { ...layer, name } : layer)));
+  };
+
+  React.useEffect(() => {
+    setLayerNameInput(activeLayer?.name ?? '');
+  }, [activeLayer?.name]);
 
   const buildRelationsFromColumns = (table: Table): Relation[] => {
     const existingRelations = graph.relations.filter((rel) => rel.fromTable === table.name);
@@ -191,6 +307,11 @@ export default function App() {
 
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
 
+  const canNavigatePrev = !isLayerCreation && activeLayerIndex > 0;
+  const canNavigateNext = !isLayerCreation && activeLayerIndex < layerSequence.length - 1;
+  const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
+  const canSaveLayerDraft = layerDraftSelection.size > 0;
+
   return (
     <div className="app-shell">
       <div className="settings-button__wrapper">
@@ -205,25 +326,29 @@ export default function App() {
       </div>
       <main className="main-panel">
         <Scene3D
-          graph={graph}
+          graph={displayedGraph}
           activeTable={activeTable}
-          onSelect={setActiveTable}
+          onSelect={handleTableSelect}
           isLayoutEditing={isLayoutEditing}
           onLayoutChange={handleLayoutChange}
+          isLayerDraftMode={isLayerCreation}
+          layerDraftSelection={layerDraftSelection}
         />
         <div className="overlay-panel">
           <div className="title" style={{ marginBottom: 12 }}>
             <span>테이블 선택</span>
-            <span className="badge">{graph.tables.length} tables</span>
+            <span className="badge">{displayedGraph.tables.length} tables</span>
           </div>
           <div className="overlay-content">
             <div className="table-list">
-              {graph.tables.map((table) => (
+              {displayedGraph.tables.map((table) => (
                 <button
                   type="button"
                   key={table.name}
-                  className={`table-pill ${activeTable === table.name ? 'active' : ''}`}
-                  onClick={() => setActiveTable(table.name)}
+                  className={`table-pill ${activeTable === table.name ? 'active' : ''} ${
+                    isLayerCreation ? 'table-pill--layer-draft' : ''
+                  } ${layerDraftSelection.has(table.name) ? 'table-pill--layer-draft-selected' : ''}`}
+                  onClick={() => handleTableSelect(table.name)}
                 >
                   <span>{table.name}</span>
                   <span className="badge">{table.columns.length} cols</span>
@@ -300,6 +425,128 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        <div className="layer-remote">
+          <div className="layer-remote__strip">
+            <span className="label">시나리오표</span>
+            <div className="layer-remote__badge-row">
+              <button
+                type="button"
+                className={`layer-remote__badge ${activeLayerId === null ? 'layer-remote__badge--active' : ''}`}
+                onClick={() => handleLayerSelect(null)}
+              >
+                기본
+              </button>
+              {layers.map((layer, index) => (
+                <button
+                  type="button"
+                  key={layer.id}
+                  className={`layer-remote__badge ${activeLayerId === layer.id ? 'layer-remote__badge--active' : ''}`}
+                  onClick={() => handleLayerSelect(layer.id)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="layer-remote__panel">
+            <div className="layer-remote__header">
+              <div>
+                <div className="label">현재 레이어</div>
+                <div className="layer-remote__title">{activeLayerLabel}</div>
+              </div>
+              <button type="button" className="small-button" onClick={() => handleLayerSelect(null)} disabled={isLayerCreation}>
+                초기 화면
+              </button>
+            </div>
+
+            <div className="layer-remote__row">
+              <button
+                type="button"
+                className="small-button"
+                onClick={() => handleNavigateLayer('prev')}
+                disabled={!canNavigatePrev}
+              >
+                ▲ 위 레이어
+              </button>
+              <button
+                type="button"
+                className="small-button"
+                onClick={() => handleNavigateLayer('next')}
+                disabled={!canNavigateNext}
+              >
+                ▼ 아래 레이어
+              </button>
+            </div>
+
+            <div className="layer-remote__row">
+              <select
+                className="select-input layer-remote__select"
+                value={activeLayerId ?? 'base'}
+                onChange={(e) => handleLayerSelect(e.target.value === 'base' ? null : e.target.value)}
+                disabled={isLayerCreation}
+              >
+                <option value="base">기본 뷰</option>
+                {layers.map((layer) => (
+                  <option key={layer.id} value={layer.id}>
+                    {layer.name}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerCreation}>
+                레이어 추가
+              </button>
+            </div>
+
+            {!isLayerCreation && activeLayer && (
+              <div className="layer-remote__row layer-remote__rename">
+                <label className="label" htmlFor="layer-name-input">
+                  레이어 이름 변경
+                </label>
+                <input
+                  id="layer-name-input"
+                  className="text-input"
+                  value={layerNameInput}
+                  onChange={(e) => handleLayerNameChange(e.target.value)}
+                  placeholder="레이어 이름"
+                />
+              </div>
+            )}
+
+            {isLayerCreation && (
+              <div className="layer-remote__creation">
+                <div className="input-group">
+                  <label className="label" htmlFor="new-layer-name">
+                    새 레이어 이름
+                  </label>
+                  <input
+                    id="new-layer-name"
+                    className="text-input"
+                    value={draftLayerName}
+                    onChange={(e) => setDraftLayerName(e.target.value)}
+                    placeholder="시나리오 이름"
+                  />
+                </div>
+                <div className="layer-remote__hint">
+                  테이블 박스를 클릭하여 시나리오에 포함할 테이블을 토글하세요. 선택된 테이블은 불투명하게 표시됩니다.
+                </div>
+                <div className="layer-remote__draft-summary">
+                  현재 선택: <strong>{layerDraftSelection.size}</strong>개 테이블
+                </div>
+                <div className="layer-remote__row">
+                  <button type="button" className="small-button" onClick={handleSaveLayerCreation} disabled={!canSaveLayerDraft}>
+                    저장
+                  </button>
+                  <button type="button" className="ghost-button" onClick={handleCancelLayerCreation}>
+                    취소
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="scene-footer">
           <div className="scene-footer__controls">
             <button
