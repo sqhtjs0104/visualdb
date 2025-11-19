@@ -3,6 +3,72 @@ import { Canvas, ThreeEvent } from '@react-three/fiber';
 import { Html, Line, OrbitControls } from '@react-three/drei';
 import { Relation, SchemaGraph, Table } from '../types';
 
+type SchemaColor = {
+  fill: string;
+  emissive: string;
+  activeFill: string;
+  activeEmissive: string;
+};
+
+const SCHEMA_COLOR_PALETTE = [
+  '#60a5fa',
+  '#34d399',
+  '#f59e0b',
+  '#a855f7',
+  '#f97316',
+  '#22d3ee',
+  '#f472b6',
+  '#38bdf8',
+  '#c084fc',
+  '#e879f9',
+];
+
+const DEFAULT_SCHEMA_COLOR: SchemaColor = {
+  fill: '#475569',
+  emissive: '#1f2937',
+  activeFill: '#4f46e5',
+  activeEmissive: '#4338ca',
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function adjustColor(hex: string, amount: number) {
+  const normalized = hex.replace('#', '');
+  const num = parseInt(normalized, 16);
+
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+
+  const transform = (channel: number) => {
+    if (amount >= 0) {
+      return clamp(Math.round(channel + (255 - channel) * amount), 0, 255);
+    }
+    return clamp(Math.round(channel * (1 + amount)), 0, 255);
+  };
+
+  const toHex = (channel: number) => channel.toString(16).padStart(2, '0');
+
+  return `#${toHex(transform(r))}${toHex(transform(g))}${toHex(transform(b))}`;
+}
+
+function buildSchemaColorMap(tables: Table[]): Record<string, SchemaColor> {
+  const schemas = Array.from(new Set(tables.map((table) => table.schema))).sort();
+
+  return schemas.reduce((acc, schema, index) => {
+    const baseColor = SCHEMA_COLOR_PALETTE[index % SCHEMA_COLOR_PALETTE.length];
+    acc[schema] = {
+      fill: baseColor,
+      emissive: adjustColor(baseColor, -0.45),
+      activeFill: adjustColor(baseColor, 0.18),
+      activeEmissive: adjustColor(baseColor, -0.1),
+    };
+    return acc;
+  }, {} as Record<string, SchemaColor>);
+}
+
 type TableInstance = {
   table: Table;
   position: [number, number, number];
@@ -48,7 +114,13 @@ function useTableInstances(graph: SchemaGraph): TableInstance[] {
   }, [graph]);
 }
 
-function TableBox({ table, position, isActive, onSelect }: TableInstance & { isActive: boolean; onSelect: () => void }) {
+function TableBox({
+  table,
+  position,
+  isActive,
+  onSelect,
+  colors,
+}: TableInstance & { isActive: boolean; onSelect: () => void; colors: SchemaColor }) {
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
   }, []);
@@ -82,7 +154,12 @@ function TableBox({ table, position, isActive, onSelect }: TableInstance & { isA
         }}
       >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
-        <meshStandardMaterial color={isActive ? '#4f46e5' : '#475569'} emissive={isActive ? '#4338ca' : '#1f2937'} opacity={0.98} transparent />
+        <meshStandardMaterial
+          color={isActive ? colors.activeFill : colors.fill}
+          emissive={isActive ? colors.activeEmissive : colors.emissive}
+          opacity={0.98}
+          transparent
+        />
       </mesh>
       <Html
         transform
@@ -199,6 +276,7 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
   const instances = useTableInstances(graph);
   const nodeLookup = useMemo(() => Object.fromEntries(instances.map((i) => [i.table.name, i.position])), [instances]);
   const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
+  const schemaColorMap = useMemo(() => buildSchemaColorMap(graph.tables), [graph.tables]);
   const [hoveredRelation, setHoveredRelation] = useState<{
     relation: Relation;
     pointer: { x: number; y: number };
@@ -237,6 +315,7 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
             key={instance.table.name}
             {...instance}
             isActive={activeTable === instance.table.name}
+            colors={schemaColorMap[instance.table.schema] ?? DEFAULT_SCHEMA_COLOR}
             onSelect={() => onSelect(instance.table.name)}
           />
         ))}
@@ -260,6 +339,20 @@ export function Scene3D({ graph, activeTable, onSelect }: SceneProps) {
           );
         })}
       </Canvas>
+
+      {Object.entries(schemaColorMap).length > 0 && (
+        <div className="schema-legend">
+          <div className="schema-legend__title">Schemas</div>
+          <div className="schema-legend__list">
+            {Object.entries(schemaColorMap).map(([schema, colors]) => (
+              <div key={schema} className="schema-legend__item">
+                <span className="schema-legend__swatch" style={{ background: colors.fill }} />
+                <span>{schema}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {hoveredRelation && (
         <div
