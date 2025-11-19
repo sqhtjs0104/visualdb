@@ -2,7 +2,7 @@ import React from 'react';
 import { Scene3D } from './components/Scene3D';
 import { SchemaInputPanel } from './components/SchemaInputPanel';
 import { mockGraph } from './mockData';
-import { SchemaGraph, Table, Relation, Scenario } from './types';
+import { SchemaGraph, Table, Relation, Scenario, ScenarioStep } from './types';
 import { TableSchemaEditor } from './components/TableSchemaEditor';
 
 const SCHEMA_ENDPOINT = '/schemaGraph.json';
@@ -297,6 +297,7 @@ export default function App() {
     if (!activeLayer || isLayerCreation) return;
     setIsScenarioEditing(true);
     setIsLayerCreation(false);
+    setIsFlowEditing(true);
     setLayerDraftSelection(new Set(activeLayer.tableNames));
     setLayerNameInput(activeLayer.name);
     resetFlowDraftsFromLayer();
@@ -367,14 +368,6 @@ export default function App() {
     () => layerSequence.findIndex((layer) => layer.id === activeLayerId),
     [activeLayerId, layerSequence]
   );
-
-  const handleNavigateLayer = (direction: 'prev' | 'next') => {
-    const delta = direction === 'prev' ? -1 : 1;
-    const nextIndex = activeLayerIndex + delta;
-    if (nextIndex < 0 || nextIndex >= layerSequence.length) return;
-    const targetLayer = layerSequence[nextIndex];
-    handleLayerSelect(targetLayer.id);
-  };
 
   const handleLayerNameChange = (name: string) => {
     setLayerNameInput(name);
@@ -574,7 +567,7 @@ export default function App() {
                 className="select-input layer-remote__select"
                 value={activeLayerId ?? 'base'}
                 onChange={(e) => handleLayerSelect(e.target.value === 'base' ? null : e.target.value)}
-                disabled={isLayerDraftMode}
+                disabled={isLayerDraftMode || isFlowEditing}
               >
                 <option value="base">기본 뷰</option>
                 {layers.map((layer) => (
@@ -583,7 +576,7 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode}>
+              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode || isFlowEditing}>
                 레이어 추가
               </button>
               {activeLayer && !isLayerCreation && (
@@ -723,7 +716,7 @@ export default function App() {
               </div>
             )}
 
-            {!isLayerDraftMode && activeLayerSteps.length > 0 && (
+            {!isLayerDraftMode && !isFlowEditing && activeLayerSteps.length > 0 && (
               <div className="layer-remote__flow">
                 <div className="label">시나리오 플로우</div>
                 <ol className="layer-remote__flow-list">
