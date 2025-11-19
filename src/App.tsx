@@ -611,7 +611,6 @@ export default function App() {
           >
             <div className="table-layer-popup__header">
               <div className="table-layer-popup__title">
-                <span className="table-layer-popup__subtitle">시나리오 레이어</span>
                 <strong className="table-layer-popup__table-name">{tableLayerPopup.tableName}</strong>
               </div>
               <button
