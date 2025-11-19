@@ -2,7 +2,7 @@ import React from 'react';
 import { Scene3D } from './components/Scene3D';
 import { SchemaInputPanel } from './components/SchemaInputPanel';
 import { mockGraph } from './mockData';
-import { SchemaGraph, Table, Relation, Scenario } from './types';
+import { SchemaGraph, Table, Relation, Scenario, ScenarioStep } from './types';
 import { TableSchemaEditor } from './components/TableSchemaEditor';
 
 const SCHEMA_ENDPOINT = '/schemaGraph.json';
@@ -364,65 +364,6 @@ export default function App() {
     setLayerDraftSelection(new Set());
   };
 
-  const handleStartFlowEdit = () => {
-    if (!activeLayer || isLayerDraftMode) return;
-    setIsLayerCreation(false);
-    setIsLayerEditing(false);
-    setLayerDraftSelection(new Set());
-    setIsFlowEditing(true);
-    setLayerNameInput(activeLayer.name);
-    setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
-  };
-
-  const handleCancelFlowEdit = () => {
-    setIsFlowEditing(false);
-    setLayerNameInput(activeLayer?.name ?? '');
-    setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
-  };
-
-  const handleFlowDraftChange = (index: number, description: string) => {
-    setFlowDrafts((prev) => prev.map((step, idx) => (idx === index ? { ...step, description } : step)));
-  };
-
-  const handleAddFlowDraft = () => {
-    setFlowDrafts((prev) => [...prev, { order: prev.length + 1, description: '' }]);
-  };
-
-  const handleRemoveFlowDraft = (index: number) => {
-    setFlowDrafts((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleReorderFlowDraft = (index: number, direction: 'up' | 'down') => {
-    setFlowDrafts((prev) => {
-      const target = index + (direction === 'up' ? -1 : 1);
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(index, 1);
-      next.splice(target, 0, moved);
-      return next;
-    });
-  };
-
-  const handleSaveFlowDrafts = () => {
-    if (!activeLayer) return;
-    const sanitizedName = (layerNameInput || '').trim() || activeLayer.name;
-    const normalizedSteps = flowDraftSteps.map((step, index) => ({
-      order: index + 1,
-      description: step.description.trim() || `단계 ${index + 1}`,
-    }));
-    const updatedLayer: Scenario = { ...activeLayer, name: sanitizedName, steps: normalizedSteps };
-    const nextScenarios = layers.map((layer) => (layer.id === activeLayer.id ? updatedLayer : layer));
-
-    handleGraphChange(
-      {
-        ...graph,
-        scenarios: nextScenarios,
-      },
-      { preserveActive: true }
-    );
-    setIsFlowEditing(false);
-  };
-
   const layerSequence = React.useMemo(
     () => [{ id: null, name: '기본 뷰' }, ...layers.map((layer) => ({ id: layer.id, name: layer.name }))],
     [layers]
@@ -432,14 +373,6 @@ export default function App() {
     () => layerSequence.findIndex((layer) => layer.id === activeLayerId),
     [activeLayerId, layerSequence]
   );
-
-  const handleNavigateLayer = (direction: 'prev' | 'next') => {
-    const delta = direction === 'prev' ? -1 : 1;
-    const nextIndex = activeLayerIndex + delta;
-    if (nextIndex < 0 || nextIndex >= layerSequence.length) return;
-    const targetLayer = layerSequence[nextIndex];
-    handleLayerSelect(targetLayer.id);
-  };
 
   const handleLayerNameChange = (name: string) => {
     setLayerNameInput(name);
@@ -493,8 +426,6 @@ export default function App() {
 
   const isLayerDraftMode = isLayerCreation || isLayerEditing;
   const isScenarioEditing = isLayerEditing && isFlowEditing && !isLayerCreation;
-  const canNavigatePrev = !isLayerDraftMode && activeLayerIndex > 0;
-  const canNavigateNext = !isLayerDraftMode && activeLayerIndex < layerSequence.length - 1;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
   const activeLayerSteps = React.useMemo(
