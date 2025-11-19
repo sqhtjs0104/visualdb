@@ -114,6 +114,7 @@ export const mockGraph: SchemaGraph = {
         { order: 1, description: '고객 계정 조회' },
         { order: 2, description: '주문 기록 확인' },
         { order: 3, description: '주문별 상품 구성 검토' },
+        { order: 4, description: '배송 준비 및 상태 추적' },
       ],
     },
     {
@@ -123,6 +124,7 @@ export const mockGraph: SchemaGraph = {
       steps: [
         { order: 1, description: '신규 상품 등록' },
         { order: 2, description: '가격 및 SKU 점검' },
+        { order: 3, description: '재고 보충 및 판매 중지 처리' },
       ],
     },
   ],
