@@ -111,7 +111,7 @@ export default function App() {
 
   const handleLayoutChange = React.useCallback(
     (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => {
-      const nodes = { ...(graph.layout?.nodes ?? {}) };
+      const nodes = { ...(graph.positions ?? {}) };
       const previous = nodes[tableName];
       const y = previous?.y ?? position[1];
       const z = options?.lockZ && previous ? previous.z : position[2];
@@ -119,7 +119,7 @@ export default function App() {
       handleGraphChange(
         {
           ...graph,
-          layout: { nodes },
+          positions: nodes,
         },
         { preserveActive: true }
       );
@@ -174,7 +174,6 @@ export default function App() {
     const updatedRelations = buildRelationsFromColumns(draftTable);
     const updatedTable: Table = {
       ...draftTable,
-      relations: updatedRelations,
       primaryKey: draftTable.columns.filter((col) => col.isPrimary).map((col) => col.name),
     };
 

@@ -4,11 +4,10 @@
 
 ### Table
 - `name` (string): Logical table name.
-- `schema` (string): Owning schema/database name.
+- `domain` (string): Domain or schema grouping label.
 - `columns` (Column[]): Ordered list of columns.
 - `primaryKey` (string[]): Column names forming the primary key.
 - `indexes` (Index[]): Secondary indexes, excluding the primary key.
-- `relations` (Relation[]): Outgoing relations referencing other tables.
 - `rowEstimate` (number, optional): Approximate row count for sizing in the 3D layout.
 - `comment` (string, optional): Free-form description.
 
@@ -37,13 +36,12 @@
 - `unique` (boolean)
 - `type` (string, optional): Index type (e.g., `BTREE`, `HASH`).
 
-### GraphMeta
-- `version` (string): Monotonic graph version for cache validation.
-- `layout` (object): Precomputed layout coordinates keyed by table name.
-  - `nodes` (object): `{ [tableName: string]: { x: number, y: number, z: number } }`
-  - `edges` (object): `{ [relationName: string]: { points: [ { x, y, z } ] } }`
-- `updatedAt` (ISO datetime): Server-side timestamp when the graph snapshot was produced.
-- `etag` (string, optional): ETag derived from the version+layout payload.
+### Layout / Positions
+- `positions` (object): Precomputed coordinates keyed by table name.
+  - `{ [tableName: string]: { x: number, y: number, z: number } }`
+- `version` (string, optional): Monotonic graph version for cache validation.
+- `updatedAt` (ISO datetime, optional): Server-side timestamp when the graph snapshot was produced.
+- `etag` (string, optional): ETag derived from the version+positions payload.
 
 ## 2. API Spec (Draft)
 
@@ -72,7 +70,7 @@ Returns the graph DTO for a single schema.
     "tables": [
       {
         "name": "orders",
-        "schema": "ecommerce",
+        "domain": "ecommerce",
         "primaryKey": ["id"],
         "columns": [
           { "name": "id", "type": "bigint", "nullable": false, "isPrimary": true, "isUnique": true, "isIndexed": true },
@@ -82,35 +80,25 @@ Returns the graph DTO for a single schema.
         "indexes": [
           { "name": "idx_orders_user", "columns": ["user_id"], "unique": false, "type": "BTREE" }
         ],
-        "relations": [
-          { "name": "fk_orders_user", "fromTable": "orders", "fromColumns": ["user_id"], "toTable": "users", "toColumns": ["id"], "onDelete": "CASCADE" }
-        ],
         "rowEstimate": 1250000
       }
     ],
     "relations": [
       { "name": "fk_orders_user", "fromTable": "orders", "fromColumns": ["user_id"], "toTable": "users", "toColumns": ["id"], "onDelete": "CASCADE" }
     ],
-    "graphMeta": {
-      "version": "2024-06-02T09:30:00Z",
-      "etag": "W/\"ecommerce-20240602T0930\"",
-      "updatedAt": "2024-06-02T09:30:00Z",
-      "layout": {
-        "nodes": {
-          "orders": { "x": 0, "y": 0, "z": 0 },
-          "users": { "x": 4, "y": 1, "z": -2 }
-        },
-        "edges": {
-          "fk_orders_user": { "points": [ { "x": 0, "y": 0, "z": 0 }, { "x": 4, "y": 1, "z": -2 } ] }
-        }
-      }
-    }
+    "positions": {
+      "orders": { "x": 0, "y": 0, "z": 0 },
+      "users": { "x": 4, "y": 1, "z": -2 }
+    },
+    "version": "2024-06-02T09:30:00Z",
+    "etag": "W/\"ecommerce-20240602T0930\"",
+    "updatedAt": "2024-06-02T09:30:00Z"
   }
 }
 ```
 
 **304 Not Modified**
-- Returned when `If-None-Match` or `If-Modified-Since` matches `graphMeta.etag` or `graphMeta.version`.
+- Returned when `If-None-Match` or `If-Modified-Since` matches the graph `etag` or `version`.
 
 ### `POST /schemas/:schema/refresh`
 Triggers metadata refresh for the schema.
@@ -131,7 +119,7 @@ Triggers metadata refresh for the schema.
 - `refreshSchema(schema: string): Promise<RefreshStatus>`
 - `supports(schema: string): boolean` (optional hint for multi-tenant providers)
 
-Types reuse the DTOs above for tables, columns, relations, indexes, and `GraphMeta`.
+Types reuse the DTOs above for tables, columns, relations, indexes, and shared positions metadata.
 
 ### MySQL Provider Responsibilities
 - Connect via a read-only, metadata-only account; no data access required.
@@ -151,8 +139,8 @@ Types reuse the DTOs above for tables, columns, relations, indexes, and `GraphMe
 - Search/Filter: quick search by table/column name; filter by schema or tag; toggle hiding isolated tables.
 
 ## 5. Update & Cache Strategy
-- Each `graphMeta` includes `version` and `etag` fields; clients send conditional requests (`If-None-Match`, `If-Modified-Since`).
-- Full reload occurs when `version` changes; partial updates may be applied when only layout or row estimates change.
+- Each graph payload includes `version` and `etag` fields; clients send conditional requests (`If-None-Match`, `If-Modified-Since`).
+- Full reload occurs when `version` changes; partial updates may be applied when only positions or row estimates change.
 - Server maintains per-schema cache with TTL; `refreshSchema` invalidates cache and triggers recomputation.
 - Client caches last graph by `schema` and `version`; falling back to full reload when applying partial patch fails validation.
 
@@ -165,10 +153,10 @@ Types reuse the DTOs above for tables, columns, relations, indexes, and `GraphMe
 - Access control: optional API token via `VISUALDB_API_TOKEN`; audit refresh requests with requester identity and timestamp.
 
 ## 7. Next Steps Checklist
-- **DTO validation**: Freeze field names/types and publish JSON Schema for `Table`, `Column`, `Relation`, `Index`, and `GraphMeta` so frontends/backend agree on casing and nullability.
+- **DTO validation**: Freeze field names/types and publish JSON Schema for `Table`, `Column`, `Relation`, `Index`, and positions metadata so frontends/backend agree on casing and nullability.
 - **Provider contract**: Codify `SchemaProvider` in code (TypeScript or Go) with docs on error codes/timeouts; ship a stub MySQL provider that hits `information_schema` and returns mock data for local testing.
-- **Caching & refresh flow**: Implement ETag/version headers on `/schemas/:schema/graph`, persist layout+metadata in cache storage (e.g., Redis), and wire `/refresh` to invalidate and enqueue recomputation.
-- **Graph layout pipeline**: Choose a force-directed or layered layout algorithm, persist coordinates into `graphMeta.layout`, and allow client overrides while retaining server defaults.
+- **Caching & refresh flow**: Implement ETag/version headers on `/schemas/:schema/graph`, persist positions+metadata in cache storage (e.g., Redis), and wire `/refresh` to invalidate and enqueue recomputation.
+- **Graph layout pipeline**: Choose a force-directed or layered layout algorithm, persist coordinates into the shared `positions` map, and allow client overrides while retaining server defaults.
 - **3D UX prototype**: Build a minimal scene that loads one sample graph, supports orbit/zoom/pan, table selection/highlights, and shows tooltip + info panel stubs with DTO-backed fields.
 - **Security hardening**: Add API token middleware, structured logging with request IDs, and per-route rate limits; document env var defaults in README.
 - **Performance envelope**: Load-test rendering and backend responses against ~200 tables/400 relations to validate the 60fps and latency targets; adjust pagination or lazy-loading if necessary.

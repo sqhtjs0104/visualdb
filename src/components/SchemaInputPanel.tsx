@@ -77,7 +77,7 @@ export function SchemaInputPanel({ value, onChange, onSubmit, onLoadFromFile, on
       </button>
       {error && <div className="schema-error">❗ {error}</div>}
       <small>
-        자유롭게 DTO를 붙여넣기 하거나 수정해 mock 데이터를 실험할 수 있습니다. 테이블 좌표는 layout.nodes[tableName]에
+        자유롭게 DTO를 붙여넣기 하거나 수정해 mock 데이터를 실험할 수 있습니다. 테이블 좌표는 positions[tableName]에
         지정하면 그대로 사용됩니다.
       </small>
     </div>
