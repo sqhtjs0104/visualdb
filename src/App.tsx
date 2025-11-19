@@ -367,7 +367,6 @@ export default function App() {
     if (!activeLayer || isLayerCreation) return;
     setIsScenarioEditing(true);
     setIsLayerCreation(false);
-    setIsEditing(true);
     setLayerDraftSelection(new Set(activeLayer.tableNames));
     setLayerNameInput(activeLayer.name);
     resetFlowDraftsFromLayer();
