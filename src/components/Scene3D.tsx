@@ -180,7 +180,7 @@ function TableBox({
         position={[0, BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight, 0]}
         wrapperClass="table-box"
         className="table-label-wrapper table-label-wrapper--top"
-        onClick={onSelect}
+        pointerEvents="none"
       >
         <div className="table-label table-label--top">{table.name}</div>
       </Html>
@@ -191,7 +191,7 @@ function TableBox({
         position={[0, 0, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
         wrapperClass="table-box"
         className="table-label-wrapper table-label-wrapper--front"
-        onClick={onSelect}
+        pointerEvents="none"
       >
         <div className="table-label table-label--front">{table.name}</div>
       </Html>
