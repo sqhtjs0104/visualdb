@@ -185,7 +185,8 @@ export default function App() {
     };
 
     void bootstrapFromFile();
-  }, [handleGraphChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDraftChange = (next: Table) => {
     setDraftTable(next);
@@ -297,7 +298,7 @@ export default function App() {
     if (!activeLayer || isLayerCreation) return;
     setIsScenarioEditing(true);
     setIsLayerCreation(false);
-    setIsFlowEditing(true);
+    setIsEditing(true);
     setLayerDraftSelection(new Set(activeLayer.tableNames));
     setLayerNameInput(activeLayer.name);
     resetFlowDraftsFromLayer();
@@ -359,16 +360,6 @@ export default function App() {
     setLayerDraftSelection(new Set());
   };
 
-  const layerSequence = React.useMemo(
-    () => [{ id: null, name: '기본 뷰' }, ...layers.map((layer) => ({ id: layer.id, name: layer.name }))],
-    [layers]
-  );
-
-  const activeLayerIndex = React.useMemo(
-    () => layerSequence.findIndex((layer) => layer.id === activeLayerId),
-    [activeLayerId, layerSequence]
-  );
-
   const handleLayerNameChange = (name: string) => {
     setLayerNameInput(name);
   };
@@ -420,8 +411,6 @@ export default function App() {
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
 
   const isLayerDraftMode = isLayerCreation || isScenarioEditing;
-  const canNavigatePrev = !isLayerDraftMode && activeLayerIndex > 0;
-  const canNavigateNext = !isLayerDraftMode && activeLayerIndex < layerSequence.length - 1;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
   const activeLayerSteps = React.useMemo(
@@ -436,12 +425,6 @@ export default function App() {
   const resetFlowDraftsFromLayer = React.useCallback(() => {
     setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
   }, [activeLayerSteps]);
-
-  React.useEffect(() => {
-    resetFlowDraftsFromLayer();
-    setIsScenarioEditing(false);
-    setLayerDraftSelection(new Set());
-  }, [activeLayerId, activeLayerSteps, resetFlowDraftsFromLayer]);
 
   return (
     <div className="app-shell">
@@ -488,7 +471,6 @@ export default function App() {
             <div className="schema-panel">
               <div className="schema-panel__header">
                 <div>
-                  {/* <div className="label">선택된 테이블</div> */}
                   <div className="schema-panel__title">
                     {hydratedSelectedTable ? hydratedSelectedTable.name : '테이블을 선택하세요'}
                   </div>
@@ -567,7 +549,7 @@ export default function App() {
                 className="select-input layer-remote__select"
                 value={activeLayerId ?? 'base'}
                 onChange={(e) => handleLayerSelect(e.target.value === 'base' ? null : e.target.value)}
-                disabled={isLayerDraftMode || isFlowEditing}
+                disabled={isLayerDraftMode}
               >
                 <option value="base">기본 뷰</option>
                 {layers.map((layer) => (
@@ -576,7 +558,7 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode || isFlowEditing}>
+              <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode}>
                 레이어 추가
               </button>
               {activeLayer && !isLayerCreation && (
@@ -716,7 +698,7 @@ export default function App() {
               </div>
             )}
 
-            {!isLayerDraftMode && !isFlowEditing && activeLayerSteps.length > 0 && (
+            {!isLayerDraftMode && activeLayerSteps.length > 0 && (
               <div className="layer-remote__flow">
                 <div className="label">시나리오 플로우</div>
                 <ol className="layer-remote__flow-list">

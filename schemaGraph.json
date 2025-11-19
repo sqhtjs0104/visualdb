@@ -197,6 +197,186 @@
           "unique": true
         }
       ]
+    },
+    {
+      "name": "customers",
+      "domain": "support",
+      "primaryKey": [
+        "id"
+      ],
+      "rowEstimate": 54000,
+      "comment": "Support portal customers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "isPrimary": true,
+          "isIndexed": true
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "isUnique": true,
+          "isIndexed": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pk_customers",
+          "columns": [
+            "id"
+          ],
+          "unique": true
+        },
+        {
+          "name": "ux_customers_email",
+          "columns": [
+            "email"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "tickets",
+      "domain": "support",
+      "primaryKey": [
+        "id"
+      ],
+      "rowEstimate": 320000,
+      "comment": "Customer support tickets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "isPrimary": true,
+          "isIndexed": true
+        },
+        {
+          "name": "customer_id",
+          "type": "bigint",
+          "nullable": false,
+          "isIndexed": true,
+          "foreignKey": {
+            "table": "customers",
+            "column": "id",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE"
+          }
+        },
+        {
+          "name": "status",
+          "type": "varchar(32)",
+          "nullable": false
+        },
+        {
+          "name": "priority",
+          "type": "varchar(16)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pk_tickets",
+          "columns": [
+            "id"
+          ],
+          "unique": true
+        },
+        {
+          "name": "idx_tickets_customer",
+          "columns": [
+            "customer_id"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_tickets_status",
+          "columns": [
+            "status"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "ticket_comments",
+      "domain": "support",
+      "primaryKey": [
+        "id"
+      ],
+      "rowEstimate": 1150000,
+      "comment": "Comments and updates on support tickets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "isPrimary": true,
+          "isIndexed": true
+        },
+        {
+          "name": "ticket_id",
+          "type": "bigint",
+          "nullable": false,
+          "isIndexed": true,
+          "foreignKey": {
+            "table": "tickets",
+            "column": "id",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE"
+          }
+        },
+        {
+          "name": "author_type",
+          "type": "varchar(32)",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pk_ticket_comments",
+          "columns": [
+            "id"
+          ],
+          "unique": true
+        },
+        {
+          "name": "idx_ticket_comments_ticket",
+          "columns": [
+            "ticket_id"
+          ],
+          "unique": false
+        }
+      ]
     }
   ],
   "relations": [
@@ -238,6 +418,32 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT"
+    },
+    {
+      "name": "fk_ticket_comments_ticket_id",
+      "fromTable": "ticket_comments",
+      "fromColumns": [
+        "ticket_id"
+      ],
+      "toTable": "tickets",
+      "toColumns": [
+        "id"
+      ],
+      "onDelete": "CASCADE",
+      "onUpdate": "CASCADE"
+    },
+    {
+      "name": "fk_tickets_customer_id",
+      "fromTable": "tickets",
+      "fromColumns": [
+        "customer_id"
+      ],
+      "toTable": "customers",
+      "toColumns": [
+        "id"
+      ],
+      "onDelete": "CASCADE",
+      "onUpdate": "CASCADE"
     }
   ],
   "positions": {
@@ -265,52 +471,66 @@
   "scenarios": [
     {
       "id": "scenario-1",
-      "name": "\uace0\uac1d \uc8fc\ubb38 \uc5ec\uc815",
+      "name": "고객 주문 여정",
       "tableNames": [
-        "users",
         "orders",
+        "products",
         "order_items",
-        "products"
+        "users"
       ],
       "steps": [
         {
           "order": 1,
-          "description": "\uace0\uac1d \uacc4\uc815 \uc870\ud68c"
+          "description": "고객 계정 조회"
         },
         {
           "order": 2,
-          "description": "\uc8fc\ubb38 \uae30\ub85d \ud655\uc778"
+          "description": "주문 기록 확인"
         },
         {
           "order": 3,
-          "description": "\uc8fc\ubb38\ubcc4 \uc0c1\ud488 \uad6c\uc131 \uac80\ud1a0"
+          "description": "주문별 상품 구성 검토"
         },
         {
           "order": 4,
-          "description": "\ubc30\uc1a1 \uc900\ube44 \ubc0f \uc0c1\ud0dc \ucd94\uc801"
+          "description": "배송 준비 및 상태 추적"
         }
       ]
     },
     {
       "id": "scenario-2",
-      "name": "\uc0c1\ud488 \uad00\ub9ac \ud50c\ub85c\uc6b0",
+      "name": "상품 관리 플로우",
       "tableNames": [
         "products"
       ],
       "steps": [
         {
           "order": 1,
-          "description": "\uc2e0\uaddc \uc0c1\ud488 \ub4f1\ub85d"
+          "description": "신규 상품 등록"
         },
         {
           "order": 2,
-          "description": "\uac00\uaca9 \ubc0f SKU \uc810\uac80"
+          "description": "가격 및 SKU 점검"
         },
         {
           "order": 3,
-          "description": "\uc7ac\uace0 \ubcf4\ucda9 \ubc0f \ud310\ub9e4 \uc911\uc9c0 \ucc98\ub9ac"
+          "description": "재고 보충 및 판매 중지 처리"
         }
       ]
+    },
+    {
+      "id": "layer-1763536538918",
+      "name": "구매한 상품에 문의",
+      "tableNames": [
+        "customers",
+        "orders",
+        "ticket_comments",
+        "tickets",
+        "users",
+        "products",
+        "order_items"
+      ],
+      "steps": []
     }
   ]
 }
