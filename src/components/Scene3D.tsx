@@ -178,20 +178,22 @@ function TableBox({
         zIndexRange={[0, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, BOX_DIMENSIONS.height / 2 + LABEL_OFFSETS.topHeight, 0]}
+        wrapperClass="table-box"
+        className="table-label-wrapper table-label-wrapper--top"
+        onClick={onSelect}
       >
-        <div className="table-label-wrapper table-label-wrapper--top" onClick={onSelect}>
-          <div className="table-label table-label--top">{table.name}</div>
-        </div>
+        <div className="table-label table-label--top">{table.name}</div>
       </Html>
       <Html
         transform
         occlude
         zIndexRange={[0, 0]}
         position={[0, 0, BOX_DIMENSIONS.depth / 2 + LABEL_OFFSETS.frontDepth]}
+        wrapperClass="table-box"
+        className="table-label-wrapper table-label-wrapper--front"
+        onClick={onSelect}
       >
-        <div className="table-label-wrapper table-label-wrapper--front" onClick={onSelect}>
-          <div className="table-label table-label--front">{table.name}</div>
-        </div>
+        <div className="table-label table-label--front">{table.name}</div>
       </Html>
     </group>
   );
@@ -365,7 +367,6 @@ function SceneContent({
 
   useEffect(() => {
     if (!controlsRef.current) return;
-    // @ts-expect-error - OrbitControls type is compatible but not exported directly
     controlsRef.current.enabled = !Boolean(dragState);
   }, [dragState]);
 
@@ -413,12 +414,12 @@ function SceneContent({
       setDragState((prev) =>
         prev
           ? {
-              ...prev,
-              lockZ,
-              currentPosition: candidate,
-              lastValidPosition: isValid ? candidate : prev.lastValidPosition,
-              isValid,
-            }
+            ...prev,
+            lockZ,
+            currentPosition: candidate,
+            lastValidPosition: isValid ? candidate : prev.lastValidPosition,
+            isValid,
+          }
           : prev
       );
 

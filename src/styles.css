@@ -387,6 +387,10 @@ small {
   opacity: 0.85;
 }
 
+.table-box {
+  cursor: pointer;
+}
+
 .table-label {
   border: none;
   border-radius: 6px;
@@ -410,7 +414,7 @@ small {
 }
 
 .table-label-wrapper--front {
-  transform: translate3d(2%, 60%, 0);
+  transform: translate3d(0%, 60%, 0);
 }
 
 .overlay-stack {
