@@ -518,6 +518,12 @@ export default function App() {
   const isLayerDraftMode = isLayerCreation || isScenarioEditing;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
+
+  React.useEffect(() => {
+    if (!isLayerDraftMode && layerDraftSelection.size > 0) {
+      setLayerDraftSelection(new Set());
+    }
+  }, [isLayerDraftMode, layerDraftSelection]);
   const activeLayerSteps = React.useMemo(
     () => [...(activeLayer?.steps ?? [])].sort((a, b) => a.order - b.order),
     [activeLayer?.steps]
