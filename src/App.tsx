@@ -2,16 +2,43 @@ import React from 'react';
 import { Scene3D } from './components/Scene3D';
 import { SchemaInputPanel } from './components/SchemaInputPanel';
 import { mockGraph } from './mockData';
-import { SchemaGraph, Table, Relation } from './types';
+import { SchemaGraph, Table, Relation, Scenario } from './types';
 import { TableSchemaEditor } from './components/TableSchemaEditor';
 
-const SCHEMA_ENDPOINT = '/schema.json';
+const SCHEMA_ENDPOINT = '/schemaGraph.json';
 
-type ScenarioLayer = {
-  id: string;
-  name: string;
-  tableNames: string[];
-};
+function buildRenameMap(previousTables: Table[], nextTables: Table[]) {
+  const previousNames = new Set(previousTables.map((table) => table.name));
+  const nextNames = new Set(nextTables.map((table) => table.name));
+  const removed = Array.from(previousNames).filter((name) => !nextNames.has(name));
+  const added = Array.from(nextNames).filter((name) => !previousNames.has(name));
+
+  if (removed.length === 1 && added.length === 1) {
+    return { [removed[0]]: added[0] } as Record<string, string>;
+  }
+
+  return {} as Record<string, string>;
+}
+
+function sanitizeScenarioTables(
+  scenarios: Scenario[] | undefined = [],
+  tables: Table[],
+  renameMap: Record<string, string> = {}
+) {
+  const tableSet = new Set(tables.map((table) => table.name));
+
+  return scenarios.map((scenario) => {
+    const normalizedTables = Array.from(
+      new Set(
+        scenario.tableNames
+          .map((name) => renameMap[name] ?? name)
+          .filter((name) => tableSet.has(name))
+      )
+    );
+
+    return { ...scenario, tableNames: normalizedTables };
+  });
+}
 
 function serializeGraph(graph: SchemaGraph) {
   return JSON.stringify(graph, null, 2);
@@ -25,7 +52,7 @@ async function persistSchemaToFile(graph: SchemaGraph) {
       body: serializeGraph(graph),
     });
   } catch (error) {
-    console.error('Failed to write schema.json', error);
+    console.error('Failed to write schemaGraph.json', error);
   }
 }
 
@@ -38,7 +65,7 @@ async function loadSchemaFromFile(): Promise<SchemaGraph | null> {
     if (!parsed.tables || !parsed.relations) return null;
     return parsed;
   } catch (error) {
-    console.error('Failed to read schema.json', error);
+    console.error('Failed to read schemaGraph.json', error);
     return null;
   }
 }
@@ -67,14 +94,18 @@ function attachColumnForeignKeys(table: Table, relations: Relation[]) {
 }
 
 export default function App() {
-  const [graph, setGraph] = React.useState<SchemaGraph>(mockGraph);
-  const [inputValue, setInputValue] = React.useState<string>(serializeGraph(mockGraph));
+  const defaultGraph = React.useMemo(
+    () => ({ ...mockGraph, scenarios: sanitizeScenarioTables(mockGraph.scenarios, mockGraph.tables) }),
+    []
+  );
+  const [graph, setGraph] = React.useState<SchemaGraph>(defaultGraph);
+  const [inputValue, setInputValue] = React.useState<string>(serializeGraph(defaultGraph));
   const [activeTable, setActiveTable] = React.useState<string | undefined>();
   const [isLayoutEditing, setIsLayoutEditing] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [draftTable, setDraftTable] = React.useState<Table | null>(null);
   const [isSchemaModalOpen, setIsSchemaModalOpen] = React.useState(false);
-  const [layers, setLayers] = React.useState<ScenarioLayer[]>([]);
+  const [layers, setLayers] = React.useState<Scenario[]>(defaultGraph.scenarios ?? []);
   const [activeLayerId, setActiveLayerId] = React.useState<string | null>(null);
   const [isLayerCreation, setIsLayerCreation] = React.useState(false);
   const [layerDraftSelection, setLayerDraftSelection] = React.useState<Set<string>>(new Set());
@@ -101,6 +132,7 @@ export default function App() {
       tables,
       relations,
       positions,
+      scenarios: graph.scenarios,
     };
   }, [activeLayer, graph, isLayerCreation]);
 
@@ -112,16 +144,25 @@ export default function App() {
 
   const handleGraphChange = React.useCallback(
     (next: SchemaGraph, options?: { preserveActive?: boolean; skipPersist?: boolean }) => {
-      setGraph(next);
-      setInputValue(serializeGraph(next));
+      const renameMap = buildRenameMap(graph.tables, next.tables);
+      const baseScenarios = next.scenarios ?? [];
+      const sanitizedScenarios = sanitizeScenarioTables(baseScenarios, next.tables, renameMap);
+      const nextGraph = { ...next, scenarios: sanitizedScenarios };
+
+      setGraph(nextGraph);
+      setLayers(sanitizedScenarios);
+      if (activeLayerId && !sanitizedScenarios.some((scenario) => scenario.id === activeLayerId)) {
+        setActiveLayerId(null);
+      }
+      setInputValue(serializeGraph(nextGraph));
       if (!options?.preserveActive) {
         setActiveTable(undefined);
       }
       if (!options?.skipPersist) {
-        void persistSchemaToFile(next);
+        void persistSchemaToFile(nextGraph);
       }
     },
-    []
+    [activeLayerId, graph.scenarios, graph.tables, layers]
   );
 
   React.useEffect(() => {
@@ -191,7 +232,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'schema.json';
+    link.download = 'schemaGraph.json';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -219,13 +260,21 @@ export default function App() {
   const handleSaveLayerCreation = () => {
     if (layerDraftSelection.size === 0) return;
     const name = (draftLayerName || '').trim() || `시나리오 ${layers.length + 1}`;
-    const nextLayer: ScenarioLayer = {
+    const nextLayer: Scenario = {
       id: `layer-${Date.now()}`,
       name,
       tableNames: Array.from(layerDraftSelection),
+      steps: [],
     };
 
-    setLayers((prev) => [...prev, nextLayer]);
+    const nextScenarios = [...layers, nextLayer];
+    handleGraphChange(
+      {
+        ...graph,
+        scenarios: nextScenarios,
+      },
+      { preserveActive: true }
+    );
     setActiveLayerId(nextLayer.id);
     setLayerNameInput(name);
     setIsLayerCreation(false);
@@ -258,7 +307,15 @@ export default function App() {
 
   const handleLayerNameChange = (name: string) => {
     setLayerNameInput(name);
-    setLayers((prev) => prev.map((layer) => (layer.id === activeLayerId ? { ...layer, name } : layer)));
+    if (!activeLayerId) return;
+    const renamedScenarios = layers.map((layer) => (layer.id === activeLayerId ? { ...layer, name } : layer));
+    handleGraphChange(
+      {
+        ...graph,
+        scenarios: renamedScenarios,
+      },
+      { preserveActive: true }
+    );
   };
 
   React.useEffect(() => {
