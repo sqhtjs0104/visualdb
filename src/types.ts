@@ -48,8 +48,22 @@ export type Position = {
   z: number;
 };
 
+export type ScenarioStep = {
+  order: number;
+  description: string;
+};
+
+export type Scenario = {
+  id: string;
+  name: string;
+  tableNames: string[];
+  steps?: ScenarioStep[];
+  description?: string;
+};
+
 export type SchemaGraph = {
   tables: Table[];
   relations: Relation[];
   positions?: Record<string, Position>;
+  scenarios?: Scenario[];
 };

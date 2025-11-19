@@ -261,5 +261,48 @@
       "y": 0,
       "z": -1.7747422598809406
     }
-  }
+  },
+  "scenarios": [
+    {
+      "id": "scenario-1",
+      "name": "\uace0\uac1d \uc8fc\ubb38 \uc5ec\uc815",
+      "tableNames": [
+        "users",
+        "orders",
+        "order_items",
+        "products"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "description": "\uace0\uac1d \uacc4\uc815 \uc870\ud68c"
+        },
+        {
+          "order": 2,
+          "description": "\uc8fc\ubb38 \uae30\ub85d \ud655\uc778"
+        },
+        {
+          "order": 3,
+          "description": "\uc8fc\ubb38\ubcc4 \uc0c1\ud488 \uad6c\uc131 \uac80\ud1a0"
+        }
+      ]
+    },
+    {
+      "id": "scenario-2",
+      "name": "\uc0c1\ud488 \uad00\ub9ac \ud50c\ub85c\uc6b0",
+      "tableNames": [
+        "products"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "description": "\uc2e0\uaddc \uc0c1\ud488 \ub4f1\ub85d"
+        },
+        {
+          "order": 2,
+          "description": "\uac00\uaca9 \ubc0f SKU \uc810\uac80"
+        }
+      ]
+    }
+  ]
 }

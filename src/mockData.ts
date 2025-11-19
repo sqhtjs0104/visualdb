@@ -105,4 +105,25 @@ export const mockGraph: SchemaGraph = {
     order_items: { x: 4, y: 0, z: 1 },
     products: { x: 2, y: 2, z: -2 },
   },
+  scenarios: [
+    {
+      id: 'scenario-1',
+      name: '고객 주문 여정',
+      tableNames: ['users', 'orders', 'order_items', 'products'],
+      steps: [
+        { order: 1, description: '고객 계정 조회' },
+        { order: 2, description: '주문 기록 확인' },
+        { order: 3, description: '주문별 상품 구성 검토' },
+      ],
+    },
+    {
+      id: 'scenario-2',
+      name: '상품 관리 플로우',
+      tableNames: ['products'],
+      steps: [
+        { order: 1, description: '신규 상품 등록' },
+        { order: 2, description: '가격 및 SKU 점검' },
+      ],
+    },
+  ],
 };
