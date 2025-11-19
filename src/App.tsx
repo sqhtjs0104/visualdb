@@ -40,6 +40,18 @@ function sanitizeScenarioTables(
   });
 }
 
+function generateUniqueTableName(base: string, tables: Table[]) {
+  const existing = new Set(tables.map((table) => table.name));
+  if (!existing.has(base)) return base;
+  let counter = 1;
+  let candidate = `${base}_${counter}`;
+  while (existing.has(candidate)) {
+    counter += 1;
+    candidate = `${base}_${counter}`;
+  }
+  return candidate;
+}
+
 function serializeGraph(graph: SchemaGraph) {
   return JSON.stringify(graph, null, 2);
 }
@@ -113,6 +125,9 @@ export default function App() {
   const [draftLayerName, setDraftLayerName] = React.useState('');
   const [layerNameInput, setLayerNameInput] = React.useState('');
   const [flowDrafts, setFlowDrafts] = React.useState<ScenarioStep[]>([]);
+  const [isFlowEditing, setIsFlowEditing] = React.useState(false);
+  const [isCreatingTable, setIsCreatingTable] = React.useState(false);
+  const [tableEditOrigin, setTableEditOrigin] = React.useState<string | null>(null);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
@@ -168,14 +183,17 @@ export default function App() {
   );
 
   React.useEffect(() => {
+    if (isCreatingTable) return;
     if (!selectedTable) {
       setDraftTable(null);
       setIsEditing(false);
+      setTableEditOrigin(null);
       return;
     }
     setDraftTable(attachColumnForeignKeys(selectedTable, graph.relations));
+    setTableEditOrigin(selectedTable.name);
     setIsEditing(false);
-  }, [graph.relations, selectedTable]);
+  }, [graph.relations, isCreatingTable, selectedTable]);
 
   React.useEffect(() => {
     const bootstrapFromFile = async () => {
@@ -202,6 +220,12 @@ export default function App() {
         }
         return next;
       });
+    }
+    if (isCreatingTable) {
+      setIsCreatingTable(false);
+      setDraftTable(null);
+      setIsEditing(false);
+      setTableEditOrigin(null);
     }
     setActiveTable(tableName);
   };
@@ -240,8 +264,16 @@ export default function App() {
   };
 
   const handleCancelEdit = () => {
+    if (isCreatingTable) {
+      setIsCreatingTable(false);
+      setDraftTable(null);
+      setTableEditOrigin(null);
+      setIsEditing(false);
+      return;
+    }
     if (selectedTable) {
       setDraftTable(attachColumnForeignKeys(selectedTable, graph.relations));
+      setTableEditOrigin(selectedTable.name);
     }
     setIsEditing(false);
   };
@@ -250,6 +282,7 @@ export default function App() {
     setActiveLayerId(null);
     setIsLayerCreation(true);
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName(`시나리오 ${layers.length + 1}`);
   };
@@ -257,6 +290,7 @@ export default function App() {
   const handleCancelLayerCreation = () => {
     setIsLayerCreation(false);
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
     setDraftLayerName('');
   };
@@ -283,6 +317,7 @@ export default function App() {
     setLayerNameInput(name);
     setIsLayerCreation(false);
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
   };
 
@@ -290,6 +325,7 @@ export default function App() {
     setActiveLayerId(layerId);
     setIsLayerCreation(false);
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
   };
 
@@ -305,6 +341,7 @@ export default function App() {
 
   const handleCancelScenarioEdit = () => {
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set(activeLayer?.tableNames ?? []));
     setLayerNameInput(activeLayer?.name ?? '');
     resetFlowDraftsFromLayer();
@@ -356,6 +393,7 @@ export default function App() {
       { preserveActive: true }
     );
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
   };
 
@@ -404,21 +442,56 @@ export default function App() {
       ...draftTable,
       primaryKey: draftTable.columns.filter((col) => col.isPrimary).map((col) => col.name),
     };
+    const originName = tableEditOrigin ?? draftTable.name;
+    const isNewTable = isCreatingTable || !graph.tables.some((table) => table.name === originName);
 
-    const nextTables = graph.tables.map((table) => (table.name === updatedTable.name ? updatedTable : table));
-    const preservedRelations = graph.relations.filter((rel) => rel.fromTable !== updatedTable.name);
+    const nextTables = isNewTable
+      ? [...graph.tables, updatedTable]
+      : graph.tables.map((table) => (table.name === originName ? updatedTable : table));
+
+    const preservedRelations = graph.relations
+      .filter((rel) => rel.fromTable !== originName)
+      .map((rel) => {
+        if (rel.toTable === originName) {
+          return { ...rel, toTable: updatedTable.name };
+        }
+        return rel;
+      });
+
+    const nextPositions =
+      graph.positions && tableEditOrigin && tableEditOrigin !== updatedTable.name
+        ? Object.entries(graph.positions).reduce((acc, [name, position]) => {
+            if (name === tableEditOrigin) {
+              acc[updatedTable.name] = position;
+            } else {
+              acc[name] = position;
+            }
+            return acc;
+          }, {} as NonNullable<SchemaGraph['positions']>)
+        : graph.positions;
+
     const nextGraph = {
       ...graph,
       tables: nextTables,
       relations: [...preservedRelations, ...updatedRelations],
+      positions: nextPositions,
     };
 
     handleGraphChange(nextGraph, { preserveActive: true });
     setIsEditing(false);
+    setIsCreatingTable(false);
+    setTableEditOrigin(updatedTable.name);
+    setActiveTable(updatedTable.name);
   };
 
   const hydratedSelectedTable = selectedTable ? attachColumnForeignKeys(selectedTable, graph.relations) : undefined;
-
+  const panelTitle = (isEditing || isCreatingTable) && draftTable ? draftTable.name : hydratedSelectedTable?.name ?? '테이블을 선택하세요';
+  const panelComment = (isEditing || isCreatingTable) && draftTable ? draftTable.comment : hydratedSelectedTable?.comment;
+  const panelColumnCount =
+    (isEditing || isCreatingTable) && draftTable
+      ? draftTable.columns.length
+      : hydratedSelectedTable?.columns.length ?? 0;
+  const hasEditableContext = Boolean(hydratedSelectedTable || (isCreatingTable && draftTable));
   const isLayerDraftMode = isLayerCreation || isScenarioEditing;
   const canNavigatePrev = !isLayerDraftMode && activeLayerIndex > 0;
   const canNavigateNext = !isLayerDraftMode && activeLayerIndex < layerSequence.length - 1;
@@ -440,8 +513,45 @@ export default function App() {
   React.useEffect(() => {
     resetFlowDraftsFromLayer();
     setIsScenarioEditing(false);
+    setIsFlowEditing(false);
     setLayerDraftSelection(new Set());
   }, [activeLayerId, activeLayerSteps, resetFlowDraftsFromLayer]);
+
+  const handleDeleteLayer = () => {
+    if (!activeLayer) return;
+    const confirmed = window.confirm('현재 시나리오 레이어를 삭제할까요?');
+    if (!confirmed) return;
+    const nextScenarios = layers.filter((layer) => layer.id !== activeLayer.id);
+    handleGraphChange(
+      {
+        ...graph,
+        scenarios: nextScenarios,
+      },
+      { preserveActive: true }
+    );
+    setActiveLayerId(null);
+    setIsScenarioEditing(false);
+    setIsLayerCreation(false);
+    setIsFlowEditing(false);
+    setLayerDraftSelection(new Set());
+    setLayerNameInput('');
+  };
+
+  const handleStartTableCreation = () => {
+    const baseName = generateUniqueTableName('new_table', graph.tables);
+    const nextTable: Table = {
+      name: baseName,
+      domain: 'public',
+      columns: [],
+      primaryKey: [],
+      indexes: [],
+      comment: '',
+    };
+    setIsCreatingTable(true);
+    setIsEditing(true);
+    setDraftTable(nextTable);
+    setTableEditOrigin(null);
+  };
 
   return (
     <div className="app-shell">
@@ -466,9 +576,17 @@ export default function App() {
           layerDraftSelection={layerDraftSelection}
         />
         <div className="overlay-panel">
-          <div className="title" style={{ marginBottom: 12 }}>
-            <span>테이블 선택</span>
-            <span className="badge">{displayedGraph.tables.length} tables</span>
+          <div
+            className="title"
+            style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>테이블 선택</span>
+              <span className="badge">{displayedGraph.tables.length} tables</span>
+            </div>
+            <button type="button" className="small-button" onClick={handleStartTableCreation} disabled={isLayerDraftMode}>
+              + 테이블 추가
+            </button>
           </div>
           <div className="overlay-content">
             <div className="table-list">
@@ -490,16 +608,14 @@ export default function App() {
                 <div>
                   {/* <div className="label">선택된 테이블</div> */}
                   <div className="schema-panel__title">
-                    {hydratedSelectedTable ? hydratedSelectedTable.name : '테이블을 선택하세요'}
+                    {panelTitle}
                   </div>
-                  {hydratedSelectedTable?.comment && (
-                    <div className="schema-panel__comment">{hydratedSelectedTable.comment}</div>
-                  )}
+                  {panelComment && <div className="schema-panel__comment">{panelComment}</div>}
                 </div>
-                {hydratedSelectedTable && (
+                {hasEditableContext && (
                   <div className="schema-panel__actions">
-                    <span className="badge">{hydratedSelectedTable.columns.length} cols</span>
-                    {!isEditing ? (
+                    <span className="badge">{panelColumnCount} cols</span>
+                    {!isEditing && hydratedSelectedTable ? (
                       <button type="button" className="small-button" onClick={() => setIsEditing(true)}>
                         편집
                       </button>
@@ -516,39 +632,37 @@ export default function App() {
                   </div>
                 )}
               </div>
-              {hydratedSelectedTable ? (
-                isEditing && draftTable ? (
-                  <TableSchemaEditor table={draftTable} tables={graph.tables} onChange={handleDraftChange} />
-                ) : (
-                  <div className="schema-panel__table">
-                    <div className="schema-table__header schema-table__header--editable">
-                      <span style={{ width: '50px', }}>컬럼</span>
-                      <span style={{ width: '70px', }}>타입</span>
-                      <span style={{ width: '40px', }}>Nullable</span>
-                      <span style={{ width: '40px', }}>PK</span>
-                      <span style={{ width: '40px', }}>Unique</span>
-                      <span style={{ width: '40px', }}>Indexed</span>
-                      <span style={{ width: '70px', }}>FK</span>
-                      <span style={{ width: '60px', }}>on Update</span>
-                      <span style={{ width: '60px', }}>on Delete</span>
-                    </div>
-                    <div className="schema-table__body">
-                      {hydratedSelectedTable.columns.map((column) => (
-                        <div key={column.name} className="schema-table__row">
-                          <span style={{ width: '50px', }}>{column.name}</span>
-                          <span style={{ width: '70px', }}>{column.type}</span>
-                          <span style={{ width: '40px', }}>{column.nullable ? 'YES' : 'NO'}</span>
-                          <span style={{ width: '40px', }}>{column.isPrimary ? '●' : '–'}</span>
-                          <span style={{ width: '40px', }}>{column.isUnique ? '●' : '–'}</span>
-                          <span style={{ width: '40px', }}>{column.isIndexed ? '●' : '–'}</span>
-                          <span style={{ width: '70px', }}>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
-                          <span style={{ width: '60px', }}>{column.foreignKey?.onUpdate ?? '–'}</span>
-                          <span style={{ width: '60px', }}>{column.foreignKey?.onDelete ?? '–'}</span>
-                        </div>
-                      ))}
-                    </div>
+              {(isEditing || isCreatingTable) && draftTable ? (
+                <TableSchemaEditor table={draftTable} tables={graph.tables} onChange={handleDraftChange} />
+              ) : hydratedSelectedTable ? (
+                <div className="schema-panel__table">
+                  <div className="schema-table__header schema-table__header--editable">
+                    <span style={{ width: '50px', }}>컬럼</span>
+                    <span style={{ width: '70px', }}>타입</span>
+                    <span style={{ width: '40px', }}>Nullable</span>
+                    <span style={{ width: '40px', }}>PK</span>
+                    <span style={{ width: '40px', }}>Unique</span>
+                    <span style={{ width: '40px', }}>Indexed</span>
+                    <span style={{ width: '70px', }}>FK</span>
+                    <span style={{ width: '60px', }}>on Update</span>
+                    <span style={{ width: '60px', }}>on Delete</span>
                   </div>
-                )
+                  <div className="schema-table__body">
+                    {hydratedSelectedTable.columns.map((column) => (
+                      <div key={column.name} className="schema-table__row">
+                        <span style={{ width: '50px', }}>{column.name}</span>
+                        <span style={{ width: '70px', }}>{column.type}</span>
+                        <span style={{ width: '40px', }}>{column.nullable ? 'YES' : 'NO'}</span>
+                        <span style={{ width: '40px', }}>{column.isPrimary ? '●' : '–'}</span>
+                        <span style={{ width: '40px', }}>{column.isUnique ? '●' : '–'}</span>
+                        <span style={{ width: '40px', }}>{column.isIndexed ? '●' : '–'}</span>
+                        <span style={{ width: '70px', }}>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
+                        <span style={{ width: '60px', }}>{column.foreignKey?.onUpdate ?? '–'}</span>
+                        <span style={{ width: '60px', }}>{column.foreignKey?.onDelete ?? '–'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="schema-panel__empty">박스나 목록에서 테이블을 선택하면 스키마가 표시됩니다.</div>
               )}
@@ -605,6 +719,14 @@ export default function App() {
                       </button>
                     </div>
                   )}
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={handleDeleteLayer}
+                    disabled={isLayerDraftMode}
+                  >
+                    삭제
+                  </button>
                 </>
               )}
             </div>
