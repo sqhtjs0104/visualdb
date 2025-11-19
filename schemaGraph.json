@@ -517,20 +517,6 @@
           "description": "재고 보충 및 판매 중지 처리"
         }
       ]
-    },
-    {
-      "id": "layer-1763536538918",
-      "name": "구매한 상품에 문의",
-      "tableNames": [
-        "customers",
-        "orders",
-        "ticket_comments",
-        "tickets",
-        "users",
-        "products",
-        "order_items"
-      ],
-      "steps": []
     }
   ]
 }

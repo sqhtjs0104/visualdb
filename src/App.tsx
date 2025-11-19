@@ -573,9 +573,13 @@ export default function App() {
               <span>테이블 선택</span>
               <span className="badge">{displayedGraph.tables.length} tables</span>
             </div>
-            <button type="button" className="small-button" onClick={handleStartTableCreation} disabled={isLayerDraftMode}>
-              + 테이블 추가
-            </button>
+            {
+              !isCreatingTable && (
+                <button type="button" className="small-button" onClick={handleStartTableCreation} disabled={isLayerDraftMode}>
+                  + 테이블 추가
+                </button>
+              )
+            }
           </div>
           <div className="overlay-content">
             <div className="table-list">
@@ -683,16 +687,7 @@ export default function App() {
               </button>
               {activeLayer && !isLayerCreation && (
                 <>
-                  {!isScenarioEditing ? (
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={handleStartScenarioEdit}
-                      disabled={isLayerDraftMode}
-                    >
-                      편집
-                    </button>
-                  ) : (
+                  {isScenarioEditing ? (
                     <div className="edit-action-group">
                       <button
                         type="button"
@@ -706,15 +701,26 @@ export default function App() {
                         취소
                       </button>
                     </div>
+                  ) : (
+                    <div className="edit-action-group">
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={handleStartScenarioEdit}
+                        disabled={isLayerDraftMode}
+                      >
+                        편집
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={handleDeleteLayer}
+                        disabled={isLayerDraftMode}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={handleDeleteLayer}
-                    disabled={isLayerDraftMode}
-                  >
-                    삭제
-                  </button>
                 </>
               )}
             </div>
