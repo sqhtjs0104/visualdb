@@ -440,9 +440,8 @@ export default function App() {
                 <button
                   type="button"
                   key={table.name}
-                  className={`table-pill ${activeTable === table.name ? 'active' : ''} ${
-                    isLayerDraftMode ? 'table-pill--layer-draft' : ''
-                  } ${layerDraftSelection.has(table.name) ? 'table-pill--layer-draft-selected' : ''}`}
+                  className={`table-pill ${activeTable === table.name ? 'active' : ''} ${isLayerDraftMode ? 'table-pill--layer-draft' : ''
+                    } ${layerDraftSelection.has(table.name) ? 'table-pill--layer-draft-selected' : ''}`}
                   onClick={() => handleTableSelect(table.name)}
                 >
                   <span>{table.name}</span>
@@ -522,57 +521,9 @@ export default function App() {
         </div>
 
         <div className="layer-remote">
-          <div className="layer-remote__strip">
-            <span className="label">시나리오표</span>
-            <div className="layer-remote__badge-row">
-              <button
-                type="button"
-                className={`layer-remote__badge ${activeLayerId === null ? 'layer-remote__badge--active' : ''}`}
-                onClick={() => handleLayerSelect(null)}
-              >
-                기본
-              </button>
-              {layers.map((layer, index) => (
-                <button
-                  type="button"
-                  key={layer.id}
-                  className={`layer-remote__badge ${activeLayerId === layer.id ? 'layer-remote__badge--active' : ''}`}
-                  onClick={() => handleLayerSelect(layer.id)}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="layer-remote__panel">
             <div className="layer-remote__header">
-              <div>
-                <div className="label">현재 레이어</div>
-                <div className="layer-remote__title">{activeLayerLabel}</div>
-              </div>
-              <button type="button" className="small-button" onClick={() => handleLayerSelect(null)} disabled={isLayerDraftMode}>
-                초기 화면
-              </button>
-            </div>
-
-            <div className="layer-remote__row">
-              <button
-                type="button"
-                className="small-button"
-                onClick={() => handleNavigateLayer('prev')}
-                disabled={!canNavigatePrev}
-              >
-                ▲ 위 레이어
-              </button>
-              <button
-                type="button"
-                className="small-button"
-                onClick={() => handleNavigateLayer('next')}
-                disabled={!canNavigateNext}
-              >
-                ▼ 아래 레이어
-              </button>
+              <div className="layer-remote__title">{activeLayerLabel}</div>
             </div>
 
             <div className="layer-remote__row">
