@@ -620,7 +620,7 @@ export default function App() {
           aria-pressed={isLayoutEditing}
           onClick={() => setIsLayoutEditing((prev) => !prev)}
         >
-          ✏️
+          {isLayoutEditing ? '💾' : '✏️'}
         </button>
       </div>
       <main className="main-panel">
@@ -799,7 +799,7 @@ export default function App() {
                   onClick={toggleScenarioBoxVisibility}
                   disabled={isLayerDraftMode}
                 >
-                  {scenarioBoxVisibility === 'hidden' ? '반투명하게 보기' : '시나리오 외 박스 숨김'}
+                  {scenarioBoxVisibility === 'hidden' ? '🕶️' : '👀'} 박스 보기
                 </button>
               )}
               {activeLayer && !isLayerCreation && (
@@ -815,7 +815,7 @@ export default function App() {
                         💾 저장
                       </button>
                       <button type="button" className="ghost-button" onClick={handleCancelScenarioEdit}>
-                        취소
+                        ❌ 취소
                       </button>
                     </div>
                   ) : (
@@ -883,7 +883,7 @@ export default function App() {
                               onClick={() => handleReorderFlowDraft(index, 'up')}
                               disabled={index === 0}
                             >
-                              위
+                              🔺 위
                             </button>
                             <button
                               type="button"
@@ -891,14 +891,14 @@ export default function App() {
                               onClick={() => handleReorderFlowDraft(index, 'down')}
                               disabled={index === flowDraftSteps.length - 1}
                             >
-                              아래
+                              🔻 아래
                             </button>
                             <button
                               type="button"
                               className="ghost-button layer-remote__flow-remove"
                               onClick={() => handleRemoveFlowDraft(index)}
                             >
-                              제거
+                              🗑️ 제거
                             </button>
                           </div>
                         </div>
