@@ -598,6 +598,15 @@ export default function App() {
         >
           ⚙️
         </button>
+        <button
+          type="button"
+          className={`icon-button ${isLayoutEditing ? 'icon-button--active' : ''}`}
+          aria-label="레이아웃 편집"
+          aria-pressed={isLayoutEditing}
+          onClick={() => setIsLayoutEditing((prev) => !prev)}
+        >
+          ✏️
+        </button>
       </div>
       <main className="main-panel">
         <Scene3D
@@ -932,17 +941,11 @@ export default function App() {
         </div>
 
         <div className="scene-footer">
-          <div className="scene-footer__controls">
-            <button
-              type="button"
-              className={`small-button ${isLayoutEditing ? 'small-button--active' : ''}`}
-              onClick={() => setIsLayoutEditing((prev) => !prev)}
-            >
-              {isLayoutEditing ? '레이아웃 편집 종료' : '레이아웃 편집'}
-            </button>
-            <span className="scene-footer__hint">드래그로 위치 변경 · Shift 로 Z 고정</span>
-          </div>
-          <div>Orbit: 드래그 · Zoom: 휠 · Pan: 우클릭</div>
+          <div className="scene-footer__title">레이아웃 조작 도움말</div>
+          <div className="scene-footer__hint">Orbit: 드래그 · Zoom: 휠 · Pan: 우클릭</div>
+          {isLayoutEditing && (
+            <div className="scene-footer__hint scene-footer__hint--edit">드래그로 위치 변경 · Shift 로 Z 고정</div>
+          )}
         </div>
       </main>
       {isSchemaModalOpen && (
