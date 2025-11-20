@@ -121,6 +121,7 @@ export default function App() {
   const [activeLayerId, setActiveLayerId] = React.useState<string | null>(null);
   const [isLayerCreation, setIsLayerCreation] = React.useState(false);
   const [isScenarioEditing, setIsScenarioEditing] = React.useState(false);
+  const [scenarioBoxVisibility, setScenarioBoxVisibility] = React.useState<'hidden' | 'dimmed'>('hidden');
   const [layerDraftSelection, setLayerDraftSelection] = React.useState<Set<string>>(new Set());
   const [draftLayerName, setDraftLayerName] = React.useState('');
   const [layerNameInput, setLayerNameInput] = React.useState('');
@@ -142,6 +143,9 @@ export default function App() {
   const displayedGraph = React.useMemo(() => {
     if (isLayerCreation || isScenarioEditing || !activeLayer) return graph;
     const tableSet = new Set(activeLayer.tableNames);
+    if (scenarioBoxVisibility === 'dimmed') {
+      return { ...graph, scenarios: graph.scenarios };
+    }
     const tables = graph.tables.filter((table) => tableSet.has(table.name));
     const relations = graph.relations.filter(
       (rel) => tableSet.has(rel.fromTable) && tableSet.has(rel.toTable)
@@ -157,7 +161,7 @@ export default function App() {
       positions,
       scenarios: graph.scenarios,
     };
-  }, [activeLayer, graph, isLayerCreation, isScenarioEditing]);
+  }, [activeLayer, graph, isLayerCreation, isScenarioEditing, scenarioBoxVisibility]);
 
   React.useEffect(() => {
     if (activeTable && !displayedGraph.tables.some((table) => table.name === activeTable)) {
@@ -518,6 +522,13 @@ export default function App() {
   const isLayerDraftMode = isLayerCreation || isScenarioEditing;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
+  const inactiveScenarioTables = React.useMemo(() => {
+    if (!activeLayer || isLayerDraftMode || scenarioBoxVisibility === 'hidden') {
+      return new Set<string>();
+    }
+    const activeTableSet = new Set(activeLayer.tableNames);
+    return new Set(graph.tables.filter((table) => !activeTableSet.has(table.name)).map((table) => table.name));
+  }, [activeLayer, graph.tables, isLayerDraftMode, scenarioBoxVisibility]);
 
   React.useEffect(() => {
     if (!isLayerDraftMode && layerDraftSelection.size > 0) {
@@ -571,6 +582,10 @@ export default function App() {
     setLayerNameInput('');
   };
 
+  const toggleScenarioBoxVisibility = () => {
+    setScenarioBoxVisibility((prev) => (prev === 'hidden' ? 'dimmed' : 'hidden'));
+  };
+
   const handleStartTableCreation = () => {
     const baseName = generateUniqueTableName('new_table', graph.tables);
     const nextTable: Table = {
@@ -617,6 +632,7 @@ export default function App() {
           onLayoutChange={handleLayoutChange}
           isLayerDraftMode={isLayerDraftMode}
           layerDraftSelection={layerDraftSelection}
+          inactiveTables={inactiveScenarioTables}
         />
         {tableLayerPopup && (
           <div
@@ -699,13 +715,17 @@ export default function App() {
                   <div className="schema-panel__actions">
                     <span className="badge">{panelColumnCount} cols</span>
                     {!isEditing && hydratedSelectedTable ? (
-                      <button type="button" className="small-button" onClick={() => setIsEditing(true)}>
-                        편집
+                      <button
+                        type="button"
+                        className="small-button button--edit"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        ✏️ 편집
                       </button>
                     ) : (
                       <div className="edit-action-group">
-                        <button type="button" className="small-button" onClick={handleSaveDraft}>
-                          저장
+                        <button type="button" className="small-button button--save" onClick={handleSaveDraft}>
+                          💾 저장
                         </button>
                         <button type="button" className="ghost-button" onClick={handleCancelEdit}>
                           취소
@@ -772,39 +792,49 @@ export default function App() {
               <button type="button" className="small-button" onClick={handleStartLayerCreation} disabled={isLayerDraftMode}>
                 레이어 추가
               </button>
+              {activeLayer && !isLayerCreation && !isScenarioEditing && (
+                <button
+                  type="button"
+                  className="small-button button--toggle"
+                  onClick={toggleScenarioBoxVisibility}
+                  disabled={isLayerDraftMode}
+                >
+                  {scenarioBoxVisibility === 'hidden' ? '반투명하게 보기' : '시나리오 외 박스 숨김'}
+                </button>
+              )}
               {activeLayer && !isLayerCreation && (
                 <>
                   {isScenarioEditing ? (
-                    <div className="edit-action-group">
+                    <div className="edit-action-group edit-action-group--right">
                       <button
                         type="button"
-                        className="small-button"
+                        className="small-button button--save"
                         onClick={handleSaveScenarioEdit}
                         disabled={!canSaveLayerDraft}
                       >
-                        저장
+                        💾 저장
                       </button>
                       <button type="button" className="ghost-button" onClick={handleCancelScenarioEdit}>
                         취소
                       </button>
                     </div>
                   ) : (
-                    <div className="edit-action-group">
+                    <div className="edit-action-group edit-action-group--right">
                       <button
                         type="button"
-                        className="ghost-button"
+                        className="small-button button--edit"
                         onClick={handleStartScenarioEdit}
                         disabled={isLayerDraftMode}
                       >
-                        편집
+                        ✏️ 편집
                       </button>
                       <button
                         type="button"
-                        className="ghost-button"
+                        className="ghost-button button--danger"
                         onClick={handleDeleteLayer}
                         disabled={isLayerDraftMode}
                       >
-                        삭제
+                        🗑️ 삭제
                       </button>
                     </div>
                   )}

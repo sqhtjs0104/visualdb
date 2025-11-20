@@ -127,6 +127,7 @@ function TableBox({
   onPointerDown,
   isLayerDraftMode,
   isLayerDraftSelected,
+  isScenarioInactive,
 }: TableInstance & {
   isActive: boolean;
   onSelect: (event: ThreeEvent<MouseEvent>) => void;
@@ -135,6 +136,7 @@ function TableBox({
   onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
   isLayerDraftMode?: boolean;
   isLayerDraftSelected?: boolean;
+  isScenarioInactive?: boolean;
 }) {
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
@@ -149,6 +151,31 @@ function TableBox({
       document.body.style.cursor = 'auto';
     };
   }, []);
+
+  const baseColor =
+    isInvalid
+      ? '#f87171'
+      : isLayerDraftMode && !isLayerDraftSelected
+        ? adjustColor(colors.fill, 0.3)
+        : isActive
+          ? colors.activeFill
+          : colors.fill;
+
+  const baseEmissive =
+    isInvalid
+      ? '#b91c1c'
+      : isLayerDraftMode && !isLayerDraftSelected
+        ? adjustColor(colors.emissive, 0.3)
+        : isActive
+          ? colors.activeEmissive
+          : colors.emissive;
+
+  const baseOpacity = isInvalid ? 0.82 : isLayerDraftMode ? (isLayerDraftSelected ? 0.95 : 0.26) : 0.98;
+  const isDimmed = Boolean(isScenarioInactive) && !isInvalid && !isLayerDraftMode;
+  const displayColor = isDimmed ? adjustColor(baseColor, 0.35) : baseColor;
+  const displayEmissive = isDimmed ? adjustColor(baseEmissive, 0.35) : baseEmissive;
+  const displayOpacity = isDimmed ? 0.35 : baseOpacity;
+  const labelClassName = `table-label ${isDimmed ? 'table-label--muted' : ''}`;
 
   return (
     <group
@@ -177,25 +204,9 @@ function TableBox({
       >
         <boxGeometry args={[BOX_DIMENSIONS.width, BOX_DIMENSIONS.height, BOX_DIMENSIONS.depth]} />
         <meshStandardMaterial
-          color={
-            isInvalid
-              ? '#f87171'
-              : isLayerDraftMode && !isLayerDraftSelected
-              ? adjustColor(colors.fill, 0.3)
-              : isActive
-              ? colors.activeFill
-              : colors.fill
-          }
-          emissive={
-            isInvalid
-              ? '#b91c1c'
-              : isLayerDraftMode && !isLayerDraftSelected
-              ? adjustColor(colors.emissive, 0.3)
-              : isActive
-              ? colors.activeEmissive
-              : colors.emissive
-          }
-          opacity={isInvalid ? 0.82 : isLayerDraftMode ? (isLayerDraftSelected ? 0.95 : 0.26) : 0.98}
+          color={displayColor}
+          emissive={displayEmissive}
+          opacity={displayOpacity}
           transparent
         />
       </mesh>
@@ -209,7 +220,7 @@ function TableBox({
         className="table-label-wrapper table-label-wrapper--top"
         pointerEvents="none"
       >
-        <div className="table-label table-label--top">{table.name}</div>
+        <div className={`${labelClassName} table-label--top`}>{table.name}</div>
       </Html>
       <Html
         transform
@@ -220,7 +231,7 @@ function TableBox({
         className="table-label-wrapper table-label-wrapper--front"
         pointerEvents="none"
       >
-        <div className="table-label table-label--front">{table.name}</div>
+        <div className={`${labelClassName} table-label--front`}>{table.name}</div>
       </Html>
     </group>
   );
@@ -325,6 +336,7 @@ function SceneContent({
   onDragFeedbackChange,
   isLayerDraftMode,
   layerDraftSelection,
+  inactiveTables,
 }: {
   graph: SchemaGraph;
   activeTable?: string;
@@ -337,6 +349,7 @@ function SceneContent({
   onDragFeedbackChange: (feedback: DragFeedback) => void;
   isLayerDraftMode?: boolean;
   layerDraftSelection?: Set<string>;
+  inactiveTables?: Set<string>;
 }) {
   const instances = useTableInstances(graph);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -521,6 +534,7 @@ function SceneContent({
           onPointerDown={(event) => handleTablePointerDown(instance, event)}
           isLayerDraftMode={isLayerDraftMode}
           isLayerDraftSelected={layerDraftSelection?.has(instance.table.name)}
+          isScenarioInactive={inactiveTables?.has(instance.table.name)}
         />
       ))}
 
@@ -554,6 +568,7 @@ interface SceneProps {
   onLayoutChange: (tableName: string, position: [number, number, number], options?: { lockZ?: boolean }) => void;
   isLayerDraftMode?: boolean;
   layerDraftSelection?: Set<string>;
+  inactiveTables?: Set<string>;
 }
 
 export function Scene3D({
@@ -564,6 +579,7 @@ export function Scene3D({
   onLayoutChange,
   isLayerDraftMode,
   layerDraftSelection,
+  inactiveTables,
 }: SceneProps) {
   const cameraPosition = useMemo(() => [0, 16, 0.001] as [number, number, number], []);
   const domainColorMap = useMemo(() => buildDomainColorMap(graph.tables), [graph.tables]);
@@ -603,6 +619,7 @@ export function Scene3D({
           onDragFeedbackChange={setDragFeedback}
           isLayerDraftMode={isLayerDraftMode}
           layerDraftSelection={layerDraftSelection}
+          inactiveTables={inactiveTables}
         />
       </Canvas>
 

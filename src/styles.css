@@ -88,6 +88,30 @@ button {
   color: #c7d2fe;
 }
 
+.button--edit {
+  background: linear-gradient(135deg, #1e293b, #334155);
+  border-color: #60a5fa;
+  color: #dbeafe;
+}
+
+.button--save {
+  background: linear-gradient(135deg, #2563eb, #4338ca);
+  border-color: #60a5fa;
+  color: #e0f2fe;
+}
+
+.button--danger {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: #fca5a5;
+  color: #fecdd3;
+}
+
+.button--toggle {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #e2e8f0;
+}
+
 .ghost-button {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -430,6 +454,10 @@ button:active {
   gap: 6px;
 }
 
+.edit-action-group--right {
+  margin-left: auto;
+}
+
 .editor-actions {
   display: flex;
   justify-content: flex-end;
@@ -713,6 +741,10 @@ small {
   box-shadow: none;
   backdrop-filter: blur(3px);
   z-index: 1;
+}
+
+.table-label--muted {
+  opacity: 0.6;
 }
 
 .table-label-wrapper {
