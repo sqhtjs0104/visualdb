@@ -755,10 +755,6 @@ export default function App() {
 
         <div className="layer-remote">
           <div className="layer-remote__panel">
-            <div className="layer-remote__header">
-              <div className="layer-remote__title">{activeLayerLabel}</div>
-            </div>
-
             <div className="layer-remote__row">
               <select
                 className="select-input layer-remote__select"
