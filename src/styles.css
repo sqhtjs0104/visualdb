@@ -173,7 +173,7 @@ button:active {
 
 .overlay-panel {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   left: 12px;
   display: none;
   background: rgba(15, 23, 42, 0.7);
@@ -185,6 +185,11 @@ button:active {
   max-height: calc(100vh - 32px);
   overflow-y: auto;
   z-index: 4;
+  width: 420px;
+}
+
+.overlay-panel--visible {
+  display: block;
 }
 
 .table-layer-popup {
@@ -276,6 +281,35 @@ button:active {
   gap: 12px;
   align-items: start;
   flex-shrink: 0;
+}
+
+.overlay-panel__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.overlay-panel__label {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.overlay-panel__close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .table-list {

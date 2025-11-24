@@ -134,6 +134,7 @@ export default function App() {
     x: number;
     y: number;
   } | null>(null);
+  const [isTablePanelVisible, setIsTablePanelVisible] = React.useState(false);
   const tableLayerPopupRef = React.useRef<HTMLDivElement | null>(null);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
@@ -168,6 +169,12 @@ export default function App() {
       setActiveTable(undefined);
     }
   }, [activeTable, displayedGraph.tables]);
+
+  React.useEffect(() => {
+    if (!activeTable) {
+      setIsTablePanelVisible(false);
+    }
+  }, [activeTable]);
 
   React.useEffect(() => {
     if (!tableLayerPopup) return;
@@ -265,6 +272,7 @@ export default function App() {
     }
 
     setActiveTable(tableName);
+    setIsTablePanelVisible(true);
   };
 
   const handleLayoutChange = React.useCallback(
@@ -313,6 +321,16 @@ export default function App() {
       setTableEditOrigin(selectedTable.name);
     }
     setIsEditing(false);
+  };
+
+  const handleCloseTablePanel = () => {
+    setIsTablePanelVisible(false);
+    setActiveTable(undefined);
+    setTableLayerPopup(null);
+    setIsEditing(false);
+    setIsCreatingTable(false);
+    setDraftTable(null);
+    setTableEditOrigin(null);
   };
 
   const handleStartLayerCreation = () => {
@@ -519,6 +537,7 @@ export default function App() {
       ? draftTable.columns.length
       : hydratedSelectedTable?.columns.length ?? 0;
   const hasEditableContext = Boolean(hydratedSelectedTable || (isCreatingTable && draftTable));
+  const isSchemaPanelVisible = isTablePanelVisible && Boolean(hydratedSelectedTable || draftTable);
   const isLayerDraftMode = isLayerCreation || isScenarioEditing;
   const activeLayerLabel = activeLayer?.name ?? '기본 뷰';
   const canSaveLayerDraft = layerDraftSelection.size > 0;
@@ -671,37 +690,13 @@ export default function App() {
             )}
           </div>
         )}
-        <div className="overlay-panel">
-          <div
-            className="title"
-            style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>테이블 선택</span>
-              <span className="badge">{displayedGraph.tables.length} tables</span>
-            </div>
-            {
-              !isCreatingTable && (
-                <button type="button" className="small-button" onClick={handleStartTableCreation} disabled={isLayerDraftMode}>
-                  + 테이블 추가
-                </button>
-              )
-            }
-          </div>
-          <div className="overlay-content">
-            <div className="table-list">
-              {displayedGraph.tables.map((table) => (
-                <button
-                  type="button"
-                  key={table.name}
-                  className={`table-pill ${activeTable === table.name ? 'active' : ''} ${isLayerDraftMode ? 'table-pill--layer-draft' : ''
-                    } ${layerDraftSelection.has(table.name) ? 'table-pill--layer-draft-selected' : ''}`}
-                  onClick={() => handleTableSelect(table.name)}
-                >
-                  <span>{table.name}</span>
-                  <span className="badge">{table.columns.length} cols</span>
-                </button>
-              ))}
+        {isSchemaPanelVisible && (
+          <div className="overlay-panel overlay-panel--visible">
+            <div className="overlay-panel__header-row">
+              <div className="overlay-panel__label">테이블 명세</div>
+              <button type="button" className="overlay-panel__close" aria-label="테이블 명세 닫기" onClick={handleCloseTablePanel}>
+                ×
+              </button>
             </div>
             <div className="schema-panel">
               <div className="schema-panel__header">
@@ -771,7 +766,7 @@ export default function App() {
               )}
             </div>
           </div>
-        </div>
+        )}
 
         <div className="layer-remote">
           <div className="layer-remote__panel">
