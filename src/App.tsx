@@ -129,13 +129,7 @@ export default function App() {
   const [isFlowEditing, setIsFlowEditing] = React.useState(false);
   const [isCreatingTable, setIsCreatingTable] = React.useState(false);
   const [tableEditOrigin, setTableEditOrigin] = React.useState<string | null>(null);
-  const [tableLayerPopup, setTableLayerPopup] = React.useState<{
-    tableName: string;
-    x: number;
-    y: number;
-  } | null>(null);
   const [isTablePanelVisible, setIsTablePanelVisible] = React.useState(false);
-  const tableLayerPopupRef = React.useRef<HTMLDivElement | null>(null);
 
   const selectedTable = React.useMemo(() => graph.tables.find((t) => t.name === activeTable), [activeTable, graph.tables]);
 
@@ -175,20 +169,6 @@ export default function App() {
       setIsTablePanelVisible(false);
     }
   }, [activeTable]);
-
-  React.useEffect(() => {
-    if (!tableLayerPopup) return;
-    const handleWindowMouseDown = (event: MouseEvent) => {
-      if (!tableLayerPopupRef.current) return;
-      if (!tableLayerPopupRef.current.contains(event.target as Node)) {
-        setTableLayerPopup(null);
-      }
-    };
-    window.addEventListener('mousedown', handleWindowMouseDown);
-    return () => {
-      window.removeEventListener('mousedown', handleWindowMouseDown);
-    };
-  }, [tableLayerPopup]);
 
   const handleGraphChange = React.useCallback(
     (next: SchemaGraph, options?: { preserveActive?: boolean; skipPersist?: boolean }) => {
@@ -243,7 +223,7 @@ export default function App() {
 
   const handleTableSelect = (
     tableName: string,
-    options?: {
+    _options?: {
       pointer?: { x: number; y: number };
     }
   ) => {
@@ -263,12 +243,6 @@ export default function App() {
       setDraftTable(null);
       setIsEditing(false);
       setTableEditOrigin(null);
-    }
-
-    if (options?.pointer) {
-      setTableLayerPopup({ tableName, x: options.pointer.x, y: options.pointer.y });
-    } else {
-      setTableLayerPopup(null);
     }
 
     setActiveTable(tableName);
@@ -326,7 +300,6 @@ export default function App() {
   const handleCloseTablePanel = () => {
     setIsTablePanelVisible(false);
     setActiveTable(undefined);
-    setTableLayerPopup(null);
     setIsEditing(false);
     setIsCreatingTable(false);
     setDraftTable(null);
@@ -562,13 +535,10 @@ export default function App() {
     () => flowDrafts.map((step, index) => ({ ...step, order: index + 1 })),
     [flowDrafts]
   );
-  const popupLayers = React.useMemo(
-    () =>
-      tableLayerPopup
-        ? layers.filter((layer) => layer.tableNames.includes(tableLayerPopup.tableName))
-        : [],
-    [layers, tableLayerPopup]
-  );
+  const relatedLayers = React.useMemo(() => {
+    if (!hydratedSelectedTable) return [];
+    return layers.filter((layer) => layer.tableNames.includes(hydratedSelectedTable.name));
+  }, [hydratedSelectedTable, layers]);
 
   const resetFlowDraftsFromLayer = React.useCallback(() => {
     setFlowDrafts(activeLayerSteps.map((step, index) => ({ ...step, order: index + 1 })));
@@ -653,48 +623,16 @@ export default function App() {
           layerDraftSelection={layerDraftSelection}
           inactiveTables={inactiveScenarioTables}
         />
-        {tableLayerPopup && (
-          <div
-            ref={tableLayerPopupRef}
-            className="table-layer-popup"
-            style={{ top: tableLayerPopup.y + 12, left: tableLayerPopup.x + 12 }}
-          >
-            <div className="table-layer-popup__header">
-              <div className="table-layer-popup__title">
-                <strong className="table-layer-popup__table-name">{tableLayerPopup.tableName}</strong>
-              </div>
-              <button
-                type="button"
-                className="table-layer-popup__close"
-                aria-label="레이어 팝업 닫기"
-                onClick={() => setTableLayerPopup(null)}
-              >
-                ×
-              </button>
-            </div>
-            {popupLayers.length === 0 ? (
-              <div className="table-layer-popup__empty">이 테이블을 포함하는 레이어가 없습니다.</div>
-            ) : (
-              <div className="table-layer-popup__list">
-                {popupLayers.map((layer) => (
-                  <button
-                    key={layer.id}
-                    type="button"
-                    className={`table-layer-popup__item ${activeLayerId === layer.id ? 'table-layer-popup__item--active' : ''}`}
-                    onClick={() => handleLayerSelect(layer.id)}
-                  >
-                    {layer.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
         {isSchemaPanelVisible && (
           <div className="overlay-panel overlay-panel--visible">
             <div className="overlay-panel__header-row">
               <div className="overlay-panel__label">테이블 명세</div>
-              <button type="button" className="overlay-panel__close" aria-label="테이블 명세 닫기" onClick={handleCloseTablePanel}>
+              <button
+                type="button"
+                className="overlay-panel__close"
+                aria-label="테이블 명세 닫기"
+                onClick={handleCloseTablePanel}
+              >
                 ×
               </button>
             </div>
@@ -733,34 +671,61 @@ export default function App() {
               {(isEditing || isCreatingTable) && draftTable ? (
                 <TableSchemaEditor table={draftTable} tables={graph.tables} onChange={handleDraftChange} />
               ) : hydratedSelectedTable ? (
-                <div className="schema-panel__table">
-                  <div className="schema-table__header schema-table__header--editable">
-                    <span style={{ width: '50px', }}>컬럼</span>
-                    <span style={{ width: '70px', }}>타입</span>
-                    <span style={{ width: '40px', }}>Nullable</span>
-                    <span style={{ width: '40px', }}>PK</span>
-                    <span style={{ width: '40px', }}>Unique</span>
-                    <span style={{ width: '40px', }}>Indexed</span>
-                    <span style={{ width: '70px', }}>FK</span>
-                    <span style={{ width: '60px', }}>on Update</span>
-                    <span style={{ width: '60px', }}>on Delete</span>
+                <>
+                  <div className="schema-panel__table">
+                    <div className="schema-table__header schema-table__header--editable">
+                      <span style={{ width: '50px', }}>컬럼</span>
+                      <span style={{ width: '70px', }}>타입</span>
+                      <span style={{ width: '40px', }}>Nullable</span>
+                      <span style={{ width: '40px', }}>PK</span>
+                      <span style={{ width: '40px', }}>Unique</span>
+                      <span style={{ width: '40px', }}>Indexed</span>
+                      <span style={{ width: '70px', }}>FK</span>
+                      <span style={{ width: '60px', }}>on Update</span>
+                      <span style={{ width: '60px', }}>on Delete</span>
+                    </div>
+                    <div className="schema-table__body">
+                      {hydratedSelectedTable.columns.map((column) => (
+                        <div key={column.name} className="schema-table__row">
+                          <span style={{ width: '50px', }}>{column.name}</span>
+                          <span style={{ width: '70px', }}>{column.type}</span>
+                          <span style={{ width: '40px', }}>{column.nullable ? 'YES' : 'NO'}</span>
+                          <span style={{ width: '40px', }}>{column.isPrimary ? '●' : '–'}</span>
+                          <span style={{ width: '40px', }}>{column.isUnique ? '●' : '–'}</span>
+                          <span style={{ width: '40px', }}>{column.isIndexed ? '●' : '–'}</span>
+                          <span style={{ width: '70px', }}>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
+                          <span style={{ width: '60px', }}>{column.foreignKey?.onUpdate ?? '–'}</span>
+                          <span style={{ width: '60px', }}>{column.foreignKey?.onDelete ?? '–'}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="schema-table__body">
-                    {hydratedSelectedTable.columns.map((column) => (
-                      <div key={column.name} className="schema-table__row">
-                        <span style={{ width: '50px', }}>{column.name}</span>
-                        <span style={{ width: '70px', }}>{column.type}</span>
-                        <span style={{ width: '40px', }}>{column.nullable ? 'YES' : 'NO'}</span>
-                        <span style={{ width: '40px', }}>{column.isPrimary ? '●' : '–'}</span>
-                        <span style={{ width: '40px', }}>{column.isUnique ? '●' : '–'}</span>
-                        <span style={{ width: '40px', }}>{column.isIndexed ? '●' : '–'}</span>
-                        <span style={{ width: '70px', }}>{column.foreignKey ? `${column.foreignKey.table}.${column.foreignKey.column}` : '–'}</span>
-                        <span style={{ width: '60px', }}>{column.foreignKey?.onUpdate ?? '–'}</span>
-                        <span style={{ width: '60px', }}>{column.foreignKey?.onDelete ?? '–'}</span>
-                      </div>
-                    ))}
+                  <div className="schema-panel__section">
+                    <div className="label">연결 시나리오</div>
+                    {relatedLayers.length === 0 ? (
+                      <div className="schema-panel__empty">이 테이블을 포함하는 시나리오가 없습니다.</div>
+                    ) : (
+                      <ul className="schema-panel__scenario-list">
+                        {relatedLayers.map((layer) => {
+                          const stepCount = layer.steps?.length ?? 0;
+                          return (
+                            <li
+                              key={layer.id}
+                              className={`schema-panel__scenario-item${
+                                activeLayerId === layer.id ? ' schema-panel__scenario-item--active' : ''
+                              }`}
+                            >
+                              <span className="schema-panel__scenario-name">{layer.name}</span>
+                              {stepCount > 0 && (
+                                <span className="schema-panel__scenario-steps">{stepCount} 단계</span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
-                </div>
+                </>
               ) : (
                 <div className="schema-panel__empty">박스나 목록에서 테이블을 선택하면 스키마가 표시됩니다.</div>
               )}
